@@ -15,3 +15,5 @@ fi
 gem install bundler
 
 bundle install
+
+yarn install
