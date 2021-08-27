@@ -1,0 +1,18 @@
+{
+  "name": "materi_training",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "UNLICENSED",
+  "scripts": {
+    "onchange:html": "onchange './*.adoc' -- make",
+    "serve": "live-server --no-browser dist",
+    "watch": "watch 'make' ./*.adoc",
+    "start": "concurrently --kill-others \"yarn run onchange:html\" \"yarn run serve\""
+  },
+  "devDependencies": {
+    "concurrently": "^6.2.1",
+    "live-server": "^1.2.1",
+    "onchange": "^7.1.0",
+    "watch": "^1.0.2"
+  }
+}

@@ -1,0 +1,248 @@
+= Modul Pelatihan Pembuatan Produk Dengan Menggunakan Go
+:author: Didiet Noor
+:email: dnoor@retrocoding.net
+:toc:
+:toclevels: 3
+:figure-caption: Gambar
+:table-caption: Tabel
+:toc-title: Daftar Isi
+:lang: id
+:note-caption: Catatan
+
+++++
+<style>
+  .imageblock > .title {
+    text-align: inherit;
+  }
+</style>
+++++
+
+== Modul 0: Syarat dan Persiapan
+
+
+
+== Modul 1: Dasar Rekayasa Perangkat Lunak.
+
+Di modul ini kita akan membahas secara singkat tentang rekayasa perangkat lunak. Rekayasa
+perangkat lunak lebih dari sekadar menulis program. Rekayasa perangkat lunak adalah menerjemahkan
+__requirement__ menjadi perangkat lunak. Dalam rekayasa perangkat lunak ini ada beberapa praktik
+yang akan kita lakukan yaitu:
+
+Desain dan Analisis Berorientasi Objek:: Yaitu metode di mana kita memecahkan masalah dengan
+mendefinisikan entitas-entitas dalam perangkat lunak tersebut dan perilakunya (__behaviour__).
+Domain Driven Design:: Kita akan mendesain perangkat lunak dengan mendefinisikan masalah lalu
+dicarikan solusinya dengan cara mengidentifikasi __domain__, __bounded context__, dan __ubiquitous
+language__ untuk mencari __behaviour__, __rules__, dan __edge cases__ dari entitas-entitas tadi.
+Refactoring:: Metode mengubah perangkat lunak secara terus menerus dengan menyesuaikan dengan pasar
+dan juga arah perusahaan dan tim.
+Test Driven Development:: Menggunakan pengujian untuk mendorong pengembangan perangkat lunak. Setiap
+perubahan penting dalam perangkat lunak harus ditulis tesnya.
+
+=== Langkah-langkah dalam pembuatan perangkat lunak
+
+Pembuatan perangkat lunak dijalankan dengan mengikuti sebuah langkah-langkah. Dalam sebuah perusahaan
+biasanya __requirement__ sebuah perangkat lunak dijalankan dengan metode
+link:https://en.wikipedia.org/wiki/Agile_software_development[__Agile__].  Dalam metode __Agile__,
+__requirement__ dibuat dalam iterasi. Berbeda dengan metode
+link:https://en.wikipedia.org/wiki/Waterfall_model[__Waterfall__], di mana perangkat lunak
+dibuat melalui fase.
+
+.Agile vs Waterfall
+image::agile-waterfall.svg[Waterfall,800,300]
+
+=== __Requirement__ Perangkat Lunak
+
+Untuk perangkat lunak kali ini kita punya akan membuat sebuah __article manager__ dengan
+__requirement__ sebagai berikut: Perangkat lunak yang akan kita bangun adalah sebuah server blog.
+Dalam blog tersebut user bisa membuat, melihat artikel-artikel yang ada, serta menyunting
+artikel-artikel tersebut.
+
+==== Pembuatan User Stories
+
+Dari __requirement__ di atas bisa diturunkan beberapa __user stories__. __User Stories__ adalah
+sebuah deskripsi informal dari __behaviour__ perangkat lunak yang dibangun. Dari user stories inilah
+nantinya entitas akan dideduksi dan diturunkan. __User story__ biasanya ditulis dengan template.
+
+> As A **[aktor]** I want to **[kegiatan]** so that **[hasil yg diinginkan]**.
+
+Atau kalau diterjemahkan menjadi Bahasa Indonesia, kurang lebih
+
+> Sebagai **[aktor]** saya ingin **[kegiatan]** sehingga **[hasil yang diinginkan]**.
+
+Dari __requirement__ di atas, kita bisa turunkan beberapa __user stories__ sebagai berikut.
+
+[cols="1,2,5,8"]
+.**User Stories** untuk aplikasi blog
+|===
+| No |Sebagai | saya ingin | sehingga
+
+| 1
+| Penulis
+| menambahkan artikel baru
+| artikel tersebut bisa dibaca oleh pembaca
+
+| 2
+| Penulis
+| menyunting artikel saya
+| artikel yang baru bisa dibaca oleh pembaca
+
+| 3
+| Pembaca
+| melihat judul semua artikel yang ada
+| saya bisa memilih artikel mana yang mau dibaca
+
+| 4
+| Pembaca 
+| memilih satu artikel
+| saya bisa membaca satu artikel tersebut
+
+|===
+
+=== __Domain Driven Design__
+
+__Domain Driven Design__ adalah metode membuat perangkat lunak dengan menjadikan struktur perangkat
+lunak seperti nama variabel dan nama objek selaras dengan domain bisnisnya. Yang mungkin dengan
+mudah diilustrasikan seperti di bawah ini.
+
+.Ilustrasi DDD
+image::ddd-illustration.png[DDDIllustration]
+
+Pembuatan dimulai dari masalah dulu yang dibicarakan dengan bahasa yang sama (__Ubiquitous
+Language__) untuk mendapatkan pemahaman yang serupa akan domainnya. Dari pemahaman itu dicarilah
+Domainnya.  
+
+==== Mengidentifikasi **Domain** dan **Batasan Konteks**
+
+Satu istilah bisa mempunyai banyak konteks. Misalnya istilah **pelanggan**. Untuk domain seperti
+__e-commerce__, istilah **pelanggan** artinya akan berbeda untuk konteks **pembayaran** dan
+**pengiriman**. Untuk perangkat lunak yang akan kita bikin hanya ada satu konteks dan satu domain
+yaitu **penulisan artikel**. 
+
+==== Mengidentifikasi Istilah
+
+Daftar istilah penting untuk media komunikasi antara pengembang dan __domain expert__. Dari
+__requirement__ yang kita sudah dapatkan di atas kita bisa mengembangkan beberapa istilah sebagai
+berikut:
+
+[cols="1,1,4"]
+.Daftar Istilah Untuk Domain Blog
+|===
+| Bhs. Indonesia | Bhs. Inggris | Definisi 
+
+| Pembaca | Reader | Orang yang membaca artikel 
+| Penulis | Writer | Orang yang menulis artikel
+| Artikel | Article | Sesuatu yang dibaca
+
+|===
+
+==== Mengidentifikasi Entitas dan __Value Object__
+
+Hal selanjutnya yang akan kita identifikasi adalah **entitas** dan **__value objects__**. Entitas dan
+__value object__ berperan sentral dalam pembuatan perangkat lunak dengan metode __Domain Driven
+Design__.
+
+[cols="1,2,3"]
+.Entitas dan Value Object
+|===
+| Istilah | Contoh & Ilustrasi | Deskripsi
+
+| **Entitas**
+| image:ektp.png[EKtp]
+| Sesuatu yang mempunyai **identitas**. Kesamaan antar entitas adalah dari identitasnya. 
+
+Indikator
+yang biasa terlihat ketika objek tersebut mempunya **ID** atau mempunyai **status**. Dengan
+keberadaan status, artinya objek tersebut mempunyai __state__ dan __lifecycle__. Semua yang
+mempunyai __state__ dan __lifecycle__ adalah entitas.
+
+NIK dalam eKTP adalah **identitas** dan data-data di dalamnya adalah **__state__**. Data di dalamnya
+bisa berubah kapanpun, tetapi ktp tersebut merujuk ke orang yang sama karena **NIK nya sama**.
+
+| **Value Object** 
+| image:money.jpeg[Money] 
+| Sesuatu yang menyimpan kumpulan nilai. Kesamaan antar __value objects__ adalah kesamaan 
+dari **semua nilai**nya. 
+
+Perbedaan mencolok antara entitas dan __Value object__ tidak mempunyai __lifecycle__.
+
+Dua lembar uang dengan nilai yang sama misalnya **£100.00 dan Rp100,00**. Walaupun mempunyai angka
+yang sama (dua-duanya seratus) tetapi karena mata uangnya lain, yaitu Pound Sterling dan Rupiah, dua
+nilai tersebut tidak sama.  
+
+|===
+
+Sebuah objek diklasifikasikan dalam entitas atau value object **tergantung dengan konteksnya**.
+Contohnya soal uang. Jika hanya dilihat nilainya, maka dia adalah __value object__, tetapi
+ketika membangun perangkat lunak untuk memanajemen uang kertas yang beredar di masyarakat di mana
+tiap lembar uang kertas ada identitasnya berupa nomor seri, maka uang adalah entitas.
+
+Dari analisis __user story__ di atas kita bisa tulis daftar objek lalu kita identifikasi apa saja
+yang menjadi entitas dan __value object__nya.
+
+[.text-center]
+.Entitas dan Value Object dari artikel
+image::article-entities.svg[ArticleEntities, 800, align="center"]
+
+[cols="1,3,1"]
+.Objek-objek yang diidentifikasi dari domain blog
+|===
+| Nama objek | Deskripsi | Jenis objek
+
+| __Article__ | Representasi dari artikel yang ditulis dan dibaca | Entitas
+| __Author__ | Nama dan alamat email dari orang yang menulis artikel | Value Object
+| __Creation Date__ | Tanggal di mana article dibuat | Value Object
+
+|===
+
+=== Menulis kode dan pengujian
+
+Seperti yang kita bahas di bab sebelumnya. Kegiatan analisis dan menulis kode dijalankan secara
+iteratif. Artinya, selama menulis kode kita juga berkomunikasi dengan domain expert untuk
+mendapatkan penjelasan lebih detail.
+
+[NOTE]
+====
+Saya hanya akan mencontohkan untuk menuliskan kode untuk dua story di atas saja. Sementara
+story-story selanjutnya adalah pekerjaan rumah untuk __trainee__.
+====
+
+==== Analisis __Story__
+
+Ketika kita mendapatkan __story__, baik dari manajer produk atau pengguna langsung. Setelah kita
+menentukan entitas dan __value object__, kita lanjutkan dengan menganalisa __behaviour__ dari
+entitas-entitas di atas. Ada 4 hal yang harus kita tentukan yaitu:
+
+Behaviour :: yaitu perubahan keadaan dari entitas yang terlibat. Bisa digambarkan dengan __state
+transition__, dari state A ke state B.
+
+Rules:: yaitu syarat perubahan itu terjadi, jika syarat-syarat ini tidak terpenuhi, maka state
+transition tidak akan terjadi.
+
+Edge Cases:: dari __rules__ tadi, adakah keadaan yang harus ditangani jika terjadi keadaan-keadaan
+yang tidak normal. Permasalahan jaringan, data yang rusak, dan sebagainya.
+
+[NOTE]
+====
+__Rules__ dan __edge cases__ ini adalah dasar untuk penetapan __acceptance criteria__.
+====
+
+Side Effects:: biasanya berhubungan dengan __state transition__ dari entitas lain. Apakah perubahan
+__state__ dari entitas ini akan berpengaruh ke perubahan __state__ dari entitas lain?
+
+[cols="1,1"]
+|===
+| Bahasa Indonesia | Bahasa Inggris
+
+| Sebagai **Penulis** saya ingin **menambahkan artikel baru** sehingga **artikel tersebut bisa
+dibaca oleh pembaca**.
+| As a **Writer** I want to **add new article** so that **that article can be read by the reader**.
+|===
+
+Dari story di atas kita bisa analisis seperti di bawah ini.
+
+.Created State Transition
+image::state-transition.svg[Created,400]
+
+===== Behaviour
+
+__State__ pertama adalah __Created__.

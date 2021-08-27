@@ -1,0 +1,16 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    asciidoctor (2.0.16)
+    asciidoctor-multipage (0.0.12)
+      asciidoctor (>= 2.0.11, < 2.1)
+
+PLATFORMS
+  x86_64-darwin-19
+
+DEPENDENCIES
+  asciidoctor
+  asciidoctor-multipage
+
+BUNDLED WITH
+   2.2.26
