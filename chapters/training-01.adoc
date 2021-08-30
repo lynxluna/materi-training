@@ -1,28 +1,4 @@
-= Modul Pelatihan Pembuatan Produk Dengan Menggunakan Go
-:author: Didiet Noor
-:email: dnoor@retrocoding.net
-:toc:
-:toclevels: 3
-:figure-caption: Gambar
-:table-caption: Tabel
-:toc-title: Daftar Isi
-:lang: id
-:note-caption: Catatan
-:source-highlighter: pygments
-
-++++
-<style>
-  .imageblock > .title {
-    text-align: inherit;
-  }
-</style>
-++++
-
-== Modul 0: Syarat dan Persiapan
-
-
-
-== Modul 1: Dasar Rekayasa Perangkat Lunak.
+== Dasar Rekayasa Perangkat Lunak.
 
 Di modul ini kita akan membahas secara singkat tentang rekayasa perangkat lunak. Rekayasa
 perangkat lunak lebih dari sekadar menulis program. Rekayasa perangkat lunak adalah menerjemahkan
@@ -585,3 +561,5 @@ konten.
 . Refaktor kode di atas dan tambahkan keterangan **penulis** (__Author__) beserta datanya. Tetap
 tambahkan analisa, fungsi, dan __edge cases__ yang mungkin terjadi dengan penambahan keterangan
 penulis tersebut.
+
+

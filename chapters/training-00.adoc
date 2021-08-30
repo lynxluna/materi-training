@@ -1,0 +1,40 @@
+== Perkenalan
+
+=== Persiapan Lingkungan Pengembangan
+
+==== Instalasi SDK Go 1.17
+==== Docker & Editor
+
+=== Go Secara Singkat
+
+==== Hello World
+
+==== Variabel & Tipe
+
+==== Package
+
+==== Fungsi
+
+==== Array dan Slice
+
+==== Kondisional
+
+==== Loop
+
+==== Map 
+
+==== Range
+
+==== Pointer 
+
+==== Closure
+
+==== Struct 
+
+==== Interface
+
+==== Web & Web API
+
+=== Latihan
+
+

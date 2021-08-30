@@ -1,0 +1,31 @@
+== Arsitektur Perangkat Lunak
+
+=== Arsitektur Secara Abstrak
+
+==== MVC / Lasagna
+
+==== Onion / Heksagonal
+
+=== Pattern dan Implementasi Komponen Abstrak
+
+==== Lapisan penyimpanan
+
+===== Repository Pattern
+
+===== Implementasi Repository Pattern Yang Idiomatic di Go
+
+==== Lapisan Aplikasi
+
+===== Protokol yang digunakan di level Aplikasi
+
+====== HTTP
+
+====== Protocol Buffer dan gRPC
+
+====== GraphQL
+
+===== Implementasi HTTP Handler Sebagai __Application Layer__
+
+
+=== Latihan
+
