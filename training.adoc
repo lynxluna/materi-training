@@ -8,6 +8,7 @@
 :toc-title: Daftar Isi
 :lang: id
 :note-caption: Catatan
+:source-highlighter: pygments
 
 ++++
 <style>
@@ -63,11 +64,15 @@ Dari __requirement__ di atas bisa diturunkan beberapa __user stories__. __User S
 sebuah deskripsi informal dari __behaviour__ perangkat lunak yang dibangun. Dari user stories inilah
 nantinya entitas akan dideduksi dan diturunkan. __User story__ biasanya ditulis dengan template.
 
-> As A **[aktor]** I want to **[kegiatan]** so that **[hasil yg diinginkan]**.
+.Contoh Story Dalam Bahasa Inggris
+[example]
+As A **[aktor]** I want to **[kegiatan]** so that **[hasil yg diinginkan]**.
 
 Atau kalau diterjemahkan menjadi Bahasa Indonesia, kurang lebih
 
-> Sebagai **[aktor]** saya ingin **[kegiatan]** sehingga **[hasil yang diinginkan]**.
+.Contoh Story Dalam Bahasa Indonesia
+[example]
+Sebagai **[aktor]** saya ingin **[kegiatan]** sehingga **[hasil yang diinginkan]**.
 
 Dari __requirement__ di atas, kita bisa turunkan beberapa __user stories__ sebagai berikut.
 
@@ -240,9 +245,343 @@ dibaca oleh pembaca**.
 
 Dari story di atas kita bisa analisis seperti di bawah ini.
 
-.Created State Transition
-image::state-transition.svg[Created,400]
-
 ===== Behaviour
 
-__State__ pertama adalah __Created__.
+Ketika artikel dibuat, __state__ dari artikel akan berubah dari tidak ada menjadi ada. State **ada**
+ini kita akan ekspresikan dalam Bahasa Inggris sebagai `Created`.
+
+.`Created` State Transition, dari tiada menjadi ada
+image::state-transition.svg[Created,400]
+
+[#entity_rules]
+===== Rules
+
+Ketika ada perubahan state dari tidak ada menjadi `Created` pasti ada syaratnya. Syarat ini yang
+kita sebut dengan **__rules__**. Untuk entitas `Article` ini, kita punya beberapa syarat. Misalnya:
+
+. Harus ada **judul**.
+. **Judul** harus lebih dari 5 karakter.
+. Harus ada **konten**.
+. **Konten** minimal 10 karakter.
+
+Jadi jika semua syarat tidak terpenuhi, objek `Article` tidak akan pernah bisa ada. Jika
+syarat-syarat tersebut tidak dipenuhi tetapi `Article` nya ada berarti perangkat lunaknya **salah**
+karena ada entitas yang mempunyai __invalid state__.
+
+===== Edge Cases
+
+Ketika ada perubahan __state__ akan selalu ada rules dan edge cases. Untuk artikel ini tidak banyak,
+mungkin hanya beberapa misalnya:
+
+[example]
+Apa yang akan terjadi kalau judulnya kosong atau `nil`?
+
+===== Side Effects
+
+__Side effects__ atau efek samping adalah perubahan yang terjadi secara tidak langsung dari
+perubahan __state__ tersebut. Saat ini, side effect dari pembuatan artikel ini adalah: pengisian
+__creation date__ dengan tanggal sekarang yang akan dilakukan secara otomatis oleh aplikasi kita. 
+
+==== Mulai Coding!
+
+Untuk membuat kodenya, kita akan menggunakan metode yang sedikit berbeda.
+
+. Identifikasi objek.
+. Identifikasi __behaviour__.
+. Identifikasi data yang dibutuhkan untuk memenuhi __behaivour__ tersebut.
+
+===== Identifikasi objek
+
+[source,go]
+.article.go
+----
+type Article struct {
+  // Property dan field ada di sini
+}
+----
+
+`Article` ini adalah **domain object** kita yang menjadi **inti** dari perangkat lunak yang kita
+buat. Mengapa fieldnya kosong? Karena kita akan mengisi field-field tersebut berdasarkan
+__behaivour__ nya dahulu.
+
+===== Identifikasi __behaviour__
+
+__Behaviour__ pertama yaitu __creation__ atau pembuatan. Untuk membuat kita perlu sebuah fungsi untuk
+mengkonstruksi struktur `Article` tadi.
+
+[source,go]
+.article.go
+----
+type Article struct {
+  ID			uuid.UUID
+  Title			string
+  Content		string
+
+  CreatedAt time.Time
+}
+
+func (a Article) IsNil() bool {
+  return a.ID == uuid.NilID && len(a.Title) == 0 && len(a.Content) == 0
+}
+
+func createArticleWithID(id uuid.UUID, title, content string) (Article, error) {
+  var newArticle Article
+  
+  newArticle = Article {
+    ID:			id,
+    Title:		title,
+    Content:	content,
+    CreatedAt:	time.Now(),
+  } 
+  return newArticle, nil
+}
+
+func CreateArticle(title, content string) (Article, error) {
+  newId, err := uuid.NewRandom()
+
+  if err != nil {
+    return Article{}, err
+  }
+  return createArticleWithID(newId, title, content) 
+}
+----
+
+Di situ terlihat tidak ada validasi apapun. Perangkat lunak kita masih **salah**. Di sini kita coba
+lakukan identifikasi __edge cases__ dari __behaviour__ yang kita sudah definisikan. Kita
+identifikasi galat yang mungkin terjadi dari syarat-syarat di bagian <<entity_rules,__rules__>> di
+atas.
+
+[source,go]
+.article.go
+----
+var (
+  ErrEmptyTitle			= errors.New("title is empty")
+  ErrEmptyContent		= errors.New("content is empty")
+  ErrTitleTooShort		= errors.New("title too short")
+  ErrTitleTooLong		= errors.New("title too long")
+  ErrContentTooShort	= errors.New("content too short")
+)
+----
+
+Masing-masing __edge cases__ ini, kita tulis pengujiannya. Sebelum kita implementasi validasi sesuai
+__rules__ yang sudah ditulis. Teknik yang kita pakai adalah
+link:https://en.wikipedia.org/wiki/Data-driven_testing[__table driven test__^]. Kita definisikan
+saja contohnya dalam variabel.
+
+[source,go]
+.article_test.go
+----
+  const (
+  validContent = `Sollicitudin ac orci phasellus egestas tellus. Ultricies mi quis hendrerit dolor
+  magna eget est lorem ipsum. Et netus et malesuada fames ac. Euismod quis viverra nibh cras
+  pulvinar mattis nunc sed blandit. Aliquam vestibulum morbi blandit cursus risus at. Amet risus
+  nullam eget felis eget nunc lobortis. Amet volutpat consequat mauris nunc congue nisi vitae. Sem
+  viverra aliquet eget sit amet tellus cras adipiscing enim. Aliquam ultrices sagittis orci a
+  scelerisque purus semper eget duis. Interdum velit laoreet id donec ultrices tincidunt.
+  Sollicitudin aliquam ultrices sagittis orci a. Aliquet eget sit amet tellus. Quis enim lobortis
+  scelerisque fermentum dui faucibus. Dolor sit amet consectetur adipiscing elit ut. Vulputate enim
+  nulla aliquet porttitor lacus.`
+
+  validTitle = `Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+  incididunt ut labore et dolore magna aliqua.`
+
+  longTitle = `et netus et malesuada fames ac turpis egestas integer eget aliquet nibh praesent
+  tristique magna sit amet purus gravida quis blandit turpis cursus in hac habitasse platea dictumst
+  quisque sagittis purus sit amet volutpat consequat mauris nunc congue nisi vitae suscipit tellus
+  mauris a diam maecenas sed enim ut sem viverra aliquet eget sit amet tellus cras adipiscing enim
+  eu turpis egestas pretium aenean pharetra magna ac placerat vestibulum lectus mauris ultrices eros
+  in cursus turpis massa tincidunt dui ut ornare lectus sit amet est placerat in egestas erat
+  imperdiet sed euismod nisi porta lorem mollis aliquam ut porttitor leo`
+  )
+----
+
+Lalu kita tulis kode untuk pengujiannya yang isinya adalah semua __edge cases__ yang bisa
+menyebabkan __state__ nya tidak valid.
+
+[source,go]
+.article_test.go 
+----
+
+func TestCreateArticle(t *testing.T) {
+  // article yang dianggap nil (karena bukan pointer)
+  var nilArticle Article
+  require.True(t, nilArticle.IsNil())
+  
+  // id yang pasti dianggap valid
+  id := uuid.MustParse("836f6aa2-ed56-437a-aee1-eff92cf4ee4d")
+  
+  // tabel test
+  tests := []struct {
+    // nama test 
+    Name	string 
+    // input
+    Title	string
+    Content	string
+    // output
+    Result	Article
+    Err		error
+  }{
+    {"EmptyTitleContent", "", "", nilArticle, ErrEmptyTitle},
+    {"EmptyTitleOnly", "", validContent, nilArticle, ErrEmptyTitle},
+    {"EmptyContent", validTitle, "", nilArticle, ErrEmptyContent},
+    {"ShortTitle", "short", validContent, ErrTitleTooShort},
+    {"ShortContent", validTitle, "short", ErrContentTooShort},
+    {"TooLongTitle", longTitle, validContent, ErrTitleTooLong},
+    {"ValidArticle", validTitle, validContent, nil},
+  }
+
+  // Test dijalankan satu-satu dari tabel
+  for _, item := range tests {
+    t.Run(item.Name, func(t *testing.T) {
+      article, err := createArticleWithID(id, item.Title, item.Content)
+      assert.Equal(t, item.Err, err)
+
+      if item.Err == nil {
+        assert.Equal(t, item.Result, article)
+        assert.LessOrEqual(t, time.Now().Sub(article.CreatedAt), 5 * time.Second)
+        assert.False(t, item.Result.IsNil())
+      }
+      
+    }
+  }
+}
+----
+
+Jika kita jalankan pengujiannya, maka belum valid, jadi kita harus implementasikan validasinya. Dan
+tentunya, kita tulis juga kode uji untuk validasinya.
+
+[source,go]
+.article.go
+----
+
+func validateTitle(title string) error {
+  const minTitleLength = 10
+  const maxTitleLength = 500
+  
+  runeCount = utf8.RuneCountInString(title)
+
+  if runeCount == 0 {
+    return ErrEmptyTitle 
+  }
+
+  if runeCount < minTitleLength {
+    return ErrTitleTooShort 
+  }
+
+  if runeCount > maxTitleLength {
+    return ErrTitleTooLong
+  }
+
+  return nil
+}
+----
+
+[source,go]
+.article_test.go 
+----
+func TestValidateTitle(t *testing.T) {
+  tests := []struct {
+    Name	string 
+    Title	string
+    Err		error 
+  }{
+    {"Empty", "", ErrEmptyTitle},
+    {"TooShort", "too-short", ErrTitleTooShort},
+    {"TooLong", "too-long", ErrTitleTooLong},
+    {"Valid", validTitle, nil},
+  }
+
+  for _, item := range tests {
+    t.Run(item.Name, func(t *testing.T) {
+      assert.Equal(t, item.Err, validateTitle(item.Title))
+    })
+  }
+}
+----
+
+[source,go]
+.article.go
+----
+func validateContent(content string) error {
+  const minContentLength = 200 
+
+  runeCount = utf8.RuneCountInString(content)
+
+  if runeCount == 0 {
+    return ErrEmptyContent
+  }
+
+  if runeCount < minContentLength {
+    return ErrContentTooShort 
+  }
+
+  return nil
+}
+----
+
+[source,go]
+.article_test.go
+----
+func TestValidateContent(t *testing.T) {
+  tests := []struct {
+    Name	string
+
+    Content	string 
+    Err		error
+  }{
+    {"Empty", "", ErrEmptyContent},
+    {"TooShort", "short-content" ErrContentTooShort},
+    {"Valid", validContent, nil},
+  }
+
+  for _, item := range tests {
+    t.Run(item.Name, func(t *testing.T) {
+      assert.Equal(t, item.Err, validContent(item.Content))
+    }
+  }
+}
+----
+
+Setelah kita tulis dan pastikan kalau lulus uji, maka kita integrasikan saja ke fungsi
+`CreateArticle` seperti di bawah ini. Kita panggil fungsi `validateTitle` dan `validateContent` ke
+dalam article supaya fungsi ini **selalu** mengembalikan objek `Article` dengan __state__ yang benar.
+
+[source%linenums,go,highlight='5-11']
+.article.go
+----
+// .. ubah fungsi ini dengan menambahkan validasi
+func createArticleWithID(id uuid.UUID, title, content string) (Article, error) {
+  var newArticle Article
+
+  if err := validateTitle(title); err != nil {
+    return Article{}, err
+  }
+
+  if err := validateContent(content); err != nil {
+    return Article{}, err
+  }
+  
+  newArticle = Article {
+    ID:			id,
+    Title:		title,
+    Content:	content,
+    CreatedAt:	time.Now(),
+  } 
+  return newArticle, nil
+}
+
+----
+
+Jika dijalankan kode pengujiannya, hasilnya akan berhasil. Kita sudah selesai dalam analisa dan
+pembuatan __domain object__ untuk article.
+
+=== Latihan
+
+. Buat analisa, fungsi, dan __edge cases__ jika ingin mengedit article seperti mengganti titel atau
+konten.
+
+. Untuk kasus nomor 1 di atas tambahkan juga __side effect__ tanggal dan waktu pengeditan.
+
+. Refaktor kode di atas dan tambahkan keterangan **penulis** (__Author__) beserta datanya. Tetap
+tambahkan analisa, fungsi, dan __edge cases__ yang mungkin terjadi dengan penambahan keterangan
+penulis tersebut.
