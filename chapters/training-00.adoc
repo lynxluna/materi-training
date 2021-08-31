@@ -514,6 +514,23 @@ for k, v := range emails {
 
 ==== Pointer 
 
+Pointer mengandung alamat memori dari satu nilai atau variabel.
+
+[source,go]
+----
+a := 500
+b := &a 
+
+fmt.Println(a, b) // b -> nilai heksadesimal alamat a 
+
+fmt.Printf("a: %T b: %T\n", a, b) // a int, b *int.
+
+// Karena b mengarah ke alamat a maka, mengubah b sama dengan mengubah a
+*b = 200  // Dereferensi pointer b
+
+fmt.Printf("Nilai a sekarang = %d\n", a)
+----
+
 ==== Closure
 
 ==== Struct 
