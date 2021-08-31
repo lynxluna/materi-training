@@ -5,7 +5,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "bundle exec asciidoctor -r asciidoctor-multipage -b multipage_html5 -D dist index.adoc",
-    "onchange:html": "onchange './*.adoc' './chapters/**/*.adoc' -- yarn build",
+    "onchange:html": "onchange './*.adoc' './chapters/**/*.adoc' './sources/**/*' -- yarn build",
     "serve": "live-server --no-browser dist",
     "watch": "watch 'yarn build' ./*.adoc ./chapters/**/*.adoc",
     "start": "concurrently --kill-others \"yarn run onchange:html\" \"yarn run serve\""

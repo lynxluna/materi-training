@@ -1,29 +1,516 @@
 == Perkenalan
+:sourcedir: ../sources
 
 === Persiapan Lingkungan Pengembangan
 
+Sebelum memulai kursus ini, saya pastikan kita memakai editor dan versi SDK go yang sama. Editor
+yang akan kita pakai adalah:
+
+. Visual Studio Code atau NeoVim
+. Go 1.17. 
+
+Bagian ini akan menuntun instalasi keduanya. Penggunaan editor lain diperbolehkan, tetapi saya tidak
+akan melayani pertanyaan di luar VSCode dan NeoVim.
+
+Kursus ini ditulis dengan asumsi peserta memakai Sistem operasi destop seperti Windows atau macOS
+untk yang memakai Linux, diharapkan sudah paham cara memasang perangkat lunaknya sesuai distro
+masing-masing.
+
 ==== Instalasi SDK Go 1.17
+
+Untuk memasang SDK go, unduh langsung ke https://dl.golang.org[window=_blank, opts=nofollow]. Di
+situs go sudah ada instruksi untuk instalasi SDK nya. Untuk memeriksa apakah versi go nya sudah
+sesuai dengan yang kita akan pakai coba perintah sebagai berikut.
+
+[source]
+----
+> go version
+
+go version go1.17 darwin/amd64
+----
+
 ==== Docker & Editor
+
+Docker saya gunakan untuk keperluan remote devcontainer di Visual Studio untuk membuat
+__environment__ yang lebih bersih. Untuk memasang docker silahkan buka
+https://www.docker.com/products/docker-desktop[situs Docker Desktop,window=_blank,opts=nofollow] dan
+ikuti instruksi instalasinya di sana. Untuk menguji apakah sudah terinstalasi, buka aplikasi
+terminal dan kemudian ketik perintah sebagai berikut.
+
+[source]
+----
+> docker version
+
+Client:
+ Cloud integration: 1.0.17
+ Version:           20.10.8
+ API version:       1.41
+ Go version:        go1.16.6
+ Git commit:        3967b7d
+ Built:             Fri Jul 30 19:55:20 2021
+ OS/Arch:           darwin/amd64
+ Context:           default
+ Experimental:      true
+
+Server: Docker Engine - Community
+ Engine:
+  Version:          20.10.8
+  API version:      1.41 (minimum version 1.12)
+  Go version:       go1.16.6
+  Git commit:       75249d8
+  Built:            Fri Jul 30 19:52:10 2021
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          1.4.9
+  GitCommit:        e25210fe30a0a703442421b0f60afac609f950a3
+ runc:
+  Version:          1.0.1
+  GitCommit:        v1.0.1-0-g4144b63
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
+----
 
 === Go Secara Singkat
 
+Dalam subbab kali ini saya akan menerangkan Go secara sangat singkat. Ini diperlukan untuk
+menyegarkan kembali kemampuan Go sebelum kita lanjut ke kursus rekayasa perangkat lunak.
+
+Go adalah bahasa pemrograman yang dibuat oleh Google. Fokus go adalah __simplicity__.
+
 ==== Hello World
 
-==== Variabel & Tipe
+Program pertama yang kita tulis adalah program 'Hello World', tetapi kali ini ada sedikit ekstra
+karena hello world kita akan memakai karakter Unicode dan Emoji.
 
-==== Package
+[source,go,linenums]
+.hello.go
+----
+include::{sourcedir}/hello_unicode.go[]
+----
+
+Untuk menjalankan cukup dengan menulis perintah sebagai berikut
+
+[source]
+----
+> go run hello.go
+
+Hello, 世界!👋
+----
+
+Go adalah bahasa yang modern dan mendukung __string__ dengan pengkodean
+https://en.wikipedia.org/wiki/UTF-8[UTF-8, window=_blank]. Dengan begitu string seperti di atas akan
+ditampilkan dengan benar. Dalam satu program go minimal harus ada __entry point__ yang berupa fungsi
+`main()` di dalam __package__ `main` juga.
+
+==== Variabel & Tipe Data
+
+Dalam go ada beberapa tipe data. Tipe data yang umum dipakai adalah:
+
+[cols="1,5a"]
+.Tipe Data Go
+|===
+| Nama Tipe Data | Deskripsi 
+
+| `string` | kumpulan karakter
+| `bool` | berisi `true` atau `false`
+
+| `int`
+.4+| bilangan bulat. bilangan dengan angka di belakang adalah jumlah kapasitas bitnya. Bilangan tipe
+dengan prefiks `u` artinya __unsigned__ yang berarti tidak termasuk bilangan negatif. Berikut
+jangkauan masing-masing tipe data
+
+[cols="1, 4, 3"]
+!===
+! Panjang bit ! Jangkauan __signed__ ! Jangkauan __unsigned__
+
+! 8 bit ! -127 .. 127 ! 0 .. 255
+! 16 bit ! -32768 .. 38767 ! 0 .. 65535 
+! 32 bit ! -2147483648 .. 2147483647 ! 0 .. 4294967295
+! 64 bit ! -9223372036854775808 .. 9223372036854775807 ! 0 .. 18446744073709551615
+!===
+
+| `int8` `int16` `int32` `int64`
+| `uint`
+| `uint8` `uint16` `uint32` `uint64`
+
+| `byte` | ukurannya sama dengan `uint8` rata-rata dipakai untuk menyimpan data binari
+| `rune` | ukurannya sama dengan `uint32` dipakai untuk menyimpan
+https://en.wikipedia.org/wiki/Code_point[Unicode Code Point, window=_blank] masing-masing karakter
+dalam string 
+| `float32`
+.2+| bilangan pecahan desimal, berdasarkan https://en.wikipedia.org/wiki/IEEE_754[IEEE 754].
+`float32` terdiri dari 23 bit mantissa, 8 bit eksponen, dan 1 bit tanda. `float64` terdiri dari
+52-bit mantissa, 8 bit eksponen, dan 1 bit tanda.
+| `float64`
+
+|===
+
+Penggunaan variabel adalah dengan menggunakan kata kunci `var` seperti di bawah ini.
+
+[source,go]
+----
+var name string
+----
+
+Kita juga bisa menginisiasi variabel dengan memakai operator `=`. Operator `=` juga bisa dipakai
+untuk mengubah nilai sebuah variabel 
+
+[source,go]
+----
+// Inisialisasi nama sbg 'Brett'
+var name string = "Brett"
+
+// Diubah jadi 'Dylan'
+name = "Dylan"
+
+----
+
+Cara lain menginisialisasi variabel adalah dengan menggunakan operator `:=`
+
+[source,go]
+----
+name := "Brett"
+----
+
+Program pendek yang menunjukkan pemakaian variabel sebagai berikut.
+
+[source,go,linenums,highlight="9,14-16"]
+.ex01_var.go 
+----
+include::{sourcedir}/ex01_var.go[]
+----
+
+Ketika dijalankan hasilnya adalah sebagai berikut:
+
+[source]
+----
+> go run ex01_var.go
+
+Waktu sekarang sejak 1 Januari 1970:  1630410  detik
+Nama: Brett, umur 30, berat 58.77
+----
+
+Untuk keterangan dari package `fmt` dan `time` bisa dilihat di dokumentasinya di
+https://pkg.go.dev[dokumentasi go, window=_blank].
+
+==== Modul, Package, dan Kompilasi
+
+Beberapa berkas kode sumber go dapat dikumpulkan dalam satu __package__. __Package__ utama adalah
+package `main`. Mulai Go 1.13, dependensi dalam satu proyek go didefinisikan dalam satu module
+dengan fitur `go module`. Semua program dan pustaka berada di dalam `go module`.
+
+===== Membuat module dan package
+
+Kita akan coba membuat satu directory dan menginisialisasi modulnya.
+
+[source]
+----
+> mkdir berhitung
+> go mod init berhitung
+----
+
+Di dalam direktori, nanti akan ada berkas `go.mod` yang merupakan daftar modul dan dependensinya.
+Karena kita tidak memakai dependensi apapun saat ini isinya akan sangat sederhana.
+
+[source%linenums]
+.berhitung/go.mod
+----
+include::{sourcedir}/berhitung/go.mod[]
+----
+
+Di dalam direktori tersebut, kita buat lagi sebuah direktori dengan nama `math`. Di sini kita akan
+simpan semua berkas yang berhubungan dengan hitung-menghitung.
+
+[source]
+----
+> mkdir math 
+----
+
+Kemudian kita buat sebuah berkas yang isinya seperti di bawah ini. Kode sumber ini akan menjumlahkan
+semua nomor yang dimasukkan ke parameter fungsi. Untuk pembahasan fungsi akan dibahas di bagian
+selanjutnya.
+
+[source,go,linenums,highlight="1"]
+.berhitung/math/sum.go
+----
+include::{sourcedir}/berhitung/math/sum.go[]
+----
+
+Nama fungsi `Sum` dimulai dengan huruf besar karena fungsinya kita ekspor. Baris pertama menunjukkan
+nama `package` tempat kode sumber ini berada. `math` adalah nama __package__ yang baru saja kita
+buat. Di sini kita bisa menyimpan semua berkas dengan peran atau fungsi yang serupa.
+
+Di direktori `berhitung` kita simpan dulu berkas `main.go`. Berkas ini yang akan mengimpor
+__package__ `math`.
+
+[source,go,linenums,highlight="4,9"]
+.berhitung/main.go
+----
+include::{sourcedir}/berhitung/main.go[]
+----
+
+Baris nomor 2 adalah cara mengimpor modul `math` yang ada di dalam modul `berhitung`. Kemudian
+fungsi `Sum` dipanggil dengan menggunakan `math` sebagai prefiksnya.
+
+===== Menjalankan dan mengkompilasi modul
+
+Modul `berhitung` kita bisa dijalankan dengan menggunakan `go run` seperti di bawah ini:
+
+[source]
+----
+> go run .
+----
+
+Tanda titik `.` artinya kompilator akan mencari fungsi `main` di dalam modul dalam direktori ini dan
+menjalankannya. Go adalah bahasa yang dikompilasi menjadi bahasa mesin. Kode sumber akan dikompilasi
+menjadi bahasa mesin berupa berkas biner yang bisa dieksekusi. Caranya adalah sebagai berikut:
+
+[source]
+----
+> go build -o berhitung .
+----
+
+Berkas biner yang dihasilkan dari proses kompilasi ini bisa dijalankan di dalam **sistem operasi dan
+prosesor yang sama** dengan tempat kita menulis kodenya.
+
+[source]
+----
+> ls berhitung
+-rwxr-xr-x  1 lynxluna  staff  1869504 Aug 31 22:54 berhitung
+
+> file berhitung
+berhitung: Mach-O 64-bit x86_64 executable
+----
+
+Ini artinya berkas `berhitung` adalah berkas yang bisa dieksekusi berformat
+https://en.wikipedia.org/wiki/Mach-O[Mach-O,window=_blank]. Format ini adalah format __executable__
+untuk sistem operasi macOS. Kita bisa mengkompilasi untuk target lain seperti Windows atau Linux.
+Ini yang disebut dengan https://en.wikipedia.org/wiki/Cross_compiler[__cross
+compilation__,window=_blank]. Caranya adalah dengan mengeset `GOOS` dan `GOARCH`.
+
+[source]
+----
+> GOOS=linux GOARCH=amd64 go build -o berhitung-linux .
+
+> ls berhitung-linux
+-rwxr-xr-x  1 lynxluna  staff  1770713 Aug 31 23:05 berhitung-linux
+
+> file berhitung-linux
+berhitung-linux: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, Go
+BuildID=2-H-qQg6rZJY935TLO5y/LroB_qh-tIdrun7Y9dan/s1GqZmGQD1kV0KPrMfHu/zXA6vJD_JOpO5JBjN5hk, not
+stripped 
+----
+
+Berkas ini bisa kemudian bisa disalin ke server dan dijalankan.
 
 ==== Fungsi
 
+Fungsi adalah sebagian kode yang kita panggil berkali-kali. Fungsi dalam go sama saja dengan fungsi
+dalam bahasa pemrograman lain. Di bagian <<Membuat module dan package, pembuatan module dan
+package>> di atas kita sudah punya fungsi `Sum`.
+
+[source,go,linenums,highlight="4,11"]
+.berhitung/math/sum.go
+----
+include::{sourcedir}/berhitung/math/sum.go[]
+----
+
+Untuk membuat fungsi kita memakai kata kunci `func` diikuti nama fungsi dan nilai kembalian. Untuk
+mengembalikan nilai, kita memakai kata kunci `return`.
+
 ==== Array dan Slice
 
-==== Kondisional
+Baik __array__ maupun __slice__ menyimpan sebuah kumpulan nilai dengan tipe data tertentu. __Array__
+mempunyai ukuran **tetap** sementara __slice__ mempunyai ukuran yang bisa berubah. Indeks dalam
+bahasa go dimulai dari `0`. Berikut contoh membuat dan menginisialisasi __array__.
 
-==== Loop
+[source,go]
+----
+// deklarasi - assign
+var fruits [3]string
 
-==== Map 
+fruits[0] = "Orange"
+fruits[1] = "Rambutan"
+fruits[2] = "Mango"
+
+// inisialisasi dengan ukuran yang yang diketahui
+cars := [4]string{"Honda", "Toyota", "Peugeot", "Vauxhall"}
+
+// biarkan compiler menghitung ukurannya
+brands := [...]string{"Dell", "Apple", "IBM"}
+
+----
+
+Untuk slice, ukurannya belum diketahui ketika program dimulai, bisa naik dan bisa turun. Ada
+beberapa cara untuk menginisalisasi dan menggunakan slice sebagai berikut
+
+[source,go]
+----
+// deklarasi
+var drinks []string
+
+// pembuatan 
+drinks = make([]string, 3)
+
+// assignment
+drinks[0] = "Coke"
+drinks[1] = "Pepsi"
+drinks[2] = "7Up"
+
+// inisialisasi langsung
+elements := []string{"Aluminium", "Copper", "Iron", "Silver"}
+
+// mengubah array menjadi slice
+brandSlice := brands[:]
+
+// menambahkan nilai dalam slice
+drinks = append(drink, "Pocari Sweat")
+
+// menampilkan subslice
+fmt.Printf("%+v\n", elements[1:])  // 1 dan seterusnya [Copper Iron Silver]
+fmt.Printf("%+v\n", elements[:3])  // sebelum indeks 3 (0-2) [Alumunium Copper Iron]
+fmt.Printf("%+v\n", elements[1:3]) // indeks 1..2 [Copper Iron]
+----
+
+==== Percabangan
+
+Percabangan dalam Go ada dua cara yaitu dengan `if` dan `switch`. Kata kunci `if` mengecek satu
+kondisi, sedangkan `switch` beberapa kondisi sekaligus.
+
+[source,go]
+----
+
+x := 5 
+y := 20 
+
+// if - else
+if x < y {
+  fmt.Printf("%d lebih kecil daripada %d", x, y)
+} else {
+  fmt.Printf("%d lebih besar atau sama dengan %d", x, y)
+}
+
+// if - else if - else 
+
+if x < y {
+  fmt.Printf("%d lebih kecil daripada %d", x, y)
+} else if x == y {
+  fmt.Printf("%d sama dengan %d", x, y)
+} else {
+  fmt.Printf("%d lebih besar daripada %d", x, y)
+}
+
+// switch 
+
+ticker:= "AAPL"
+
+switch(brands) {
+case "AAPL":
+  fmt.Println("Apple")
+case "GOOG":
+  fmt.Println("Google")
+case "BUKA":
+  fmt.Println("Bukalapak")
+default:
+  fmt.Println("Tidak tahu")
+}
+
+----
+
+==== Perulangan
+
+Perulangan dalam go dilakukan dengan menggunakan kata kunci `for`. For menerima kondisi, kata kunci
+`range` atau kosong sama sekali untuk __infinite loop__. Go **hanya mempunyai** perulangan `for` saja.
+
+[source,go]
+----
+const n = 10
+var nums [n]int
+
+// cara panjang
+i := 0
+
+for i < n {
+  nums[i] = i * 10
+  i++
+}
+
+// cara pendek
+for i:=0; i < n; i++ {
+  nums[i] = i * 10
+}
+
+// infinite loop dengan break 
+i := 0
+
+for {
+  nums[i] = i * 10 
+  i++ 
+  if i > n {
+    break 
+  }
+}
+----
+
+==== Map
+
+Map adalah pasangan kunci dan nilai (__key value pairs__). Untuk setiap kunci unik dalam map dia
+mengandung sebuah nilai. 
+
+[source,go]
+----
+// deklarasi map dgn kunci string dan nilai string 
+var emails map[string]string 
+
+// inisialialisasi map jd siap dipakai
+emails = make(map[string]string)
+
+// deklarasi dan inisialisasi sekaligus
+emails = map[string]string {
+  "Fred":"f@red.com",
+  "Gord":"gord@some.bro",
+  "Matt":"matt@geemail.com",
+  "Reed":"ree@domain.me",
+}
+
+// mengakses map 
+d = emails["Fred"]
+
+// mengakses dan mengecek apakah ada di map
+d, ok = emails["Xyla"] // d = "", ok = false
+
+d, ok = emails["Matt"] // d = "matt@geemail.com", ok = true
+----
 
 ==== Range
+
+Range digunakan untuk mengulang __array__, __slice__, atau __map__. Kata kunci `range` akan
+menghasilan pasangan (indeks, nilai) untuk __array__ dan __slice__, sementara untuk __map__ akan
+mengembalikan (kunci, nilai).
+
+[source,go]
+----
+
+// Slice atau Array
+names := []string{"Brett", "Brad", "Xyla", "Park", "Chaz"}
+
+// Pakai indeks dan nilai
+for idx, name := range names {
+  fmt.Printlf("%d - %s\n", idx + 1, name)
+}
+
+// Pakai nilai saja
+for _, name := range names {
+  fmt.Println(name)
+}
+
+// Untuk map
+for k, v := range emails {
+  fmt.Printf("Email '%s' adalah <%s>\n", k, v)
+}
+----
 
 ==== Pointer 
 
