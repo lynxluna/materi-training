@@ -1,0 +1,21 @@
+== Testing
+
+=== Tentang Pengujian Dan Testing Pyramid
+
+=== Pengenalan Unit Testing
+
+==== Contoh: Domain Layer 
+
+=== Pengenalan Integration Testing
+
+==== Contoh: Database Testing
+
+=== Pengenalan End to End Testing
+
+==== Contoh: HTTP Testing 
+
+=== Pengenalan Load Testing 
+
+==== Contoh: Load Testing
+
+=== Latihan

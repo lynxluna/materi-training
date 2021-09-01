@@ -1,0 +1,23 @@
+== Analisa Entitas dan Lifecycle
+
+=== Pendaftaran, Otentifikasi dan Otorisasi 
+
+=== Tentang Object Lifecycle 
+
+=== Simple Object Lifecycle
+
+=== Rich Object Lifecycle
+
+=== Membuat State Diagram
+
+=== Mengidentifikasi Side Effects
+
+==== Mengimplementasi Side Effects di Application Layer 
+
+==== Mengimplementasi Side Effects di Infrastructure Layer
+
+===== DB Trigger 
+
+===== Pub-Sub
+
+=== Latihan

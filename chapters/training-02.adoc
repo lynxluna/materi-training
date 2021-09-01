@@ -22,8 +22,6 @@
 
 ====== Protocol Buffer dan gRPC
 
-====== GraphQL
-
 ===== Implementasi HTTP Handler Sebagai __Application Layer__
 
 

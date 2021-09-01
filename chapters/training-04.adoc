@@ -1,0 +1,15 @@
+== Deployment
+
+=== Trunk Based Development 
+
+=== Tentang Deployment dan CI/CD
+
+=== Alat-alat yang digunakan untuk pembuatan Pipeline 
+
+=== 12 Factor Applications
+
+=== Feature Flags & Canary
+
+=== Contoh Pembuatan CI/CD Pipeline
+
+=== Latihan

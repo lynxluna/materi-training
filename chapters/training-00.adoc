@@ -533,6 +533,8 @@ fmt.Printf("Nilai a sekarang = %d\n", a)
 
 ==== Closure
 
+Go mengizinkan fungsi anonim dan fungsi yang disimpan dalam variabel.
+
 ==== Struct 
 
 ==== Interface
