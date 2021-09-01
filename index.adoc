@@ -8,6 +8,7 @@
 :toc-title: Daftar Isi
 :lang: id
 :note-caption: Catatan
+:warning-caption: Peringatan
 :source-highlighter: pygments
 
 ++++

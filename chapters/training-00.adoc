@@ -514,9 +514,10 @@ for k, v := range emails {
 
 ==== Pointer 
 
-Pointer mengandung alamat memori dari satu nilai atau variabel.
+Pointer mengandung alamat memori dari satu nilai atau variabel. Pointer dalam Go tidak berbeda
+dengan C. Perbedaan mendasarnya adalah: dalam go, tidak bisa melakukan __pointer aritmethics__.
 
-[source,go]
+[source,go,linenums,highlight="2"]
 ----
 a := 500
 b := &a 
@@ -531,16 +532,350 @@ fmt.Printf("a: %T b: %T\n", a, b) // a int, b *int.
 fmt.Printf("Nilai a sekarang = %d\n", a)
 ----
 
+
 ==== Closure
 
-Go mengizinkan fungsi anonim dan fungsi yang disimpan dalam variabel.
+Go mengizinkan fungsi anonim dan fungsi yang disimpan dalam variabel. Kita bisa mendefinisikan
+fungsi tanpa menamainya.
 
-==== Struct 
+[source,go,linenums,highlight="5,8-11,15,18"]
+----
+include::{sourcedir}/closure/main.go[]
+----
 
-==== Interface
+Fungsi `accum` mengembalikan nilai bertipe `func (int) int` yang artinya "sebuah fungsi yang
+menerima __integer__ sebagai parameter dan mengembalikan __integer__ lagi sebagai nilai
+kembaliannya.
+
+Variabel `accumulate` tipenya adalah `func (int) int` dan menerima hasil kembalian dari fungsi
+`accum`. Nilai `accumulator` hasil kembalian dari fungsi `accum` tidak berubah.
+
+[TIP] 
+.Memoisation
+==== 
+
+Cara menyimpan `accumulator` seperti di atas disebut **Memoisation**.
+Memoisation (AS: Memoization) adalah cara menyimpan sementara hasil kalkulasi sebelumnya untuk
+dilanjutkan ke kalkulasi selanjutnya.
+
+====
+
+==== Struct
+
+Kita bisa mengumpulkan data-data yang berkaitan satu sama lain dalam satu **struktur**. Untuk
+membuat struktur, kata kunci yang dipakai adalah `struct`.
+
+Untuk membuat struktur, kita bisa mendefinisikan tipe seperti ini:
+
+[source,go]
+----
+type Person struct {
+  Name	string
+  Age	int
+}
+----
+
+Struktur juga bisa dibuat anonim dan bersarang (__nested__)
+
+[source,go]
+----
+type Person struct {
+  Name	string
+  Age	int
+  Address struct {
+    PostalCode	string
+    State		[2]rune
+  }
+}
+----
+
+Struktur bisa diinisalisasi layaknya __array__ dan __slice__. Struct juga bisa dibuat inline
+
+[source,go]
+----
+// inisalisasi
+me := Person{
+  Name: "Brad",
+  Age: 44,
+  Address: {
+    PostalCode: "77561",
+    State: {'I','L'},
+  },
+}
+
+// deklarasi dan inisalisasi
+drink := struct {
+  Brand	string
+  Capacity	int 
+}{"Coke", 500}
+----
+
+[WARNING]
+.Struktur tidak ada hubungannya dengan PBO
+====
+
+Banyak buku dan artikel di luar yang mendefinisikan struktur sebagai kumpulan data **dan method**
+atau bahkan menyamakannya dengan kata kunci `class` di bahasa lain seperti Java. Definisi ini tidak
+tepat. Go bukan bahasa yang berbasis __Class__.
+
+Ada juga yang berpendapat jika Go bukan bahasa berorientasi objek. Ini lebih salah lagi, karena
+syarat orientasi objek bukanlah keberadaan `class` atau method. Struktur di Go bukanlah __Class__
+dan metode di go punya __behaviour__ yang berbeda dengan metode dalam bahasa berbasis __Class__.
+
+====
+
+==== Metode
+
+Metode adalah fungsi dengan argumen spesial yang dinamakan __receiver__. Semua tipe bisa mempunyai
+metode, termasuk alias dari tipe bawaan.
+
+[source,go]
+----
+// Vector menunjukkan arah dan panjang
+type Vector struct {
+  x, y, z float64
+}
+
+// Panjang vektor = √(x²+y²+z²)
+func (v Vector) Magnitude() float64 {
+  return math.Sqrt(x*x+y*y+z*z)
+}
+
+// Normal vektor adalah vektor dengan panjang 1
+func (v *Vector) Normalise() {
+  d = 1.0/v.Magnitude()
+
+  v.x *= d 
+  v.y *= d
+  v.z *= d
+}
+
+// OnOff adalah alias dari Bool
+type OnOff bool
+
+// Mengubah onoff menjadi string
+func (b OnOff) String() string {
+  if(!b) {
+    return "off"
+  }
+
+  return "on"
+}
+----
+
+Seperti dalam kode di atas, ada dua jenis __receiver__ yaitu __value receiver__ dan __pointer
+receiver__. Secara singkat, kita memakai __value receiver__ sebanyak mungkin sampai kita perlu
+memakai __pointer receiver__. Kasus umum pemakaian __pointer receiver__ adalah ketika kita ingin
+mengubah nilai dari __receiver__nya. 
+
+==== __Interface__
+
+__Interface__ atau antar muka adalah kumpulan __method signature__. Sebuah variabel dengan tipe
+`interface` bisa menyimpan nilai yang mengimplementasikan **seluruh** metode yang didefinisikan
+dalam __interface__ tersebut.
+
+Contoh yang akan saya tulis adalah contoh klasik: Greeter. Dalam contoh ini saya akan menunjukkan
+kalau __interface__ dalam bahasa go **sangat berbeda** dengan bahasa lain yang berbasis __class__.
+__Interface__ dalam go bersifat implisit yang artinya semua tipe yang mengandung nama fungsi dengan
+__signature__ yang sama artinya **sudah mengimplementasikan** __interface__ tersebut. Dengan
+demikian, umumnya __interface__ didefinisikan di belakang dan merupakan evolusi dari beberapa
+implementasi yang mirip.
+
+Anggap awalnya kita hanya punya Greeter yang berbahasa Indonesia
+
+[source,go,linenums]
+----
+type IDGreeter struct {}
+
+func (g IDGreeter) Greet(){
+  fmt.Println("Halo Semua!")
+}
+
+func main() {
+  greeter := IDGreeter{} 
+  greeter.Greet()
+}
+----
+
+Lalu, kita punya Greeter yang bisa berbahasa Inggris
+
+[source,go,linenums,highlight="7,9-11,15,18"]
+----
+type IDGreeter struct{}
+
+func (g IDGreeter) Greet() {
+  fmt.Println("Halo Semua!")
+}
+
+type ENGreeter struct{}
+
+func (g ENGreeter) Greet() {
+  fmt.Println("Hello, Everybody!")
+}
+
+func main() {
+  idGreeter := IDGreeter{}
+  enGreeter := ENGreeter{}
+
+  idGreeter.Greet()
+  enGreeter.Greet()
+}
+----
+
+Karena kita tau kalau kedua greeter tersebut mempunyai method `Greet()` dengan __signature__ yang
+sama. Kita bisa menyimpan array dari dua objek tersebut. Jadi kita definisikan `Greeter` setelah
+tahu kalau kita perlu dua atau lebih tipe dengan __behaviour__ yang mirip.
+
+[source,go,linenums,highlight="13-15,18-22"]
+----
+type IDGreeter struct{}
+
+func (g IDGreeter) Greet() {
+  fmt.Println("Halo Semua!")
+}
+
+type ENGreeter struct{}
+
+func (g ENGreeter) Greet() {
+  fmt.Println("Hello, Everybody!")
+}
+
+type Greeter interface {
+  Greet()
+}
+
+func main() {  
+  greeters := []Greeter{ IDGreeter{}, ENGreeter{} }
+  
+  for _, greeter := range greeters {
+    greeter.Greet()
+  }
+}
+
+----
+
+Kemudian karena kita ingin menambahkan __behaviour__ lainnya, supaya bisa bilang selamat pagi. Kita
+definisikan interface lain. Misalnya, __morning greeter__. Kebetulan orang greeter versi Indonesia
+tidak suka bangun pagi.
+
+[source,go,linenums,highlight="13-15,17-21,38-42"]
+----
+type IDGreeter struct{}
+
+func (g IDGreeter) Greet() {
+  fmt.Println("Halo Semua!")
+}
+
+type ENGreeter struct{}
+
+func (g ENGreeter) Greet() {
+  fmt.Println("Hello, Everybody!")
+}
+
+func (g ENGreeter) GoodMorning() {
+  fmt.Println("Good morning, everybody!")
+}
+
+type DutchGreeter struct{}
+
+func (g DutchGreeter) GoodMorning() {
+  fmt.Println("Gutten Morgen")
+}
+
+type Greeter interface {
+  Greet()
+}
+
+type MorningGreeter interface {
+  GoodMorning()
+}
+
+func main() {  
+  greeters := []Greeter{ IDGreeter{}, ENGreeter{} }
+  
+  for _, greeter := range greeters {
+    greeter.Greet()
+  }
+
+  morningGreeters := []Greeter{EnGreeter{}, DutchGreeter{}} 
+
+  for _, mg := range morningGreeters {
+    mg.GoodMorning() 
+  }
+}
+
+----
+
+Saya menulis panjang lebar tentang __interface__ di sini karena prihatin karena di internet,
+terutama artikel-artikel berbahasa Indonesia banyak yg memakai __interface__ ini layaknya bahasa
+lain yang merupakan bahasa eksplisit.
 
 ==== Web & Web API
 
+Go sudah mempunyai fitur bawaan untuk menangani Web dan Web API. Saya tidak akan membahas terlalu
+banyak, saya hanya akan membahas singkat, karena Web API akan kita dalami di bab-bab selanjutnya.
+
+Semua hal yang berbau jaringan, ditangani dengan __package__ `net`. Karena HTTP adalah jenis
+__server__ yang paling banyak dipakai, Go menyediakan __package__ `net/http`. Abstraksi `net/http`
+cukup masuk akal dan mudah digunakan. Di dalamnya sudah ada HTTP handler, HTTP Server, HTTP Client,
+dan juga pengujian HTTP.
+
+__Path__ dalam `net/http` ditangani oleh __interface__ `Handler` dengan definisi sebagai berikut:
+
+[source,go]
+----
+type Handler interface {
+	ServeHTTP(http.ResponseWriter, *http.Request)
+}
+----
+
+Yang artinya semua tipe yang mengimplementasikan __interface__ di atas akan dipanggil. Pustaka
+standar go menyediakan implementasi sederhana dari __interface__ ini yaitu `http.ServeMux` yang bisa
+memilih handler berdasarkan path.
+
+[source,go,linenums]
+----
+import "net/http"
+
+func main() {
+    mux := http.NewServeMux()
+
+    mux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+      if r.Method != http.MethodGet {
+        w.WriteHeader(http.StatusMethodNotAllowed)
+        return
+      }
+      
+      w.WriteHeader(http.StatusOK)
+      w.Write([]byte("Hello, world!")
+    })
+
+    http.ListenAndServe(":3000", mux)
+}
+
+----
+
+Seperti terlihat di atas, `http.ServeMux` fiturnya sangat sederhana. Untuk mengambil parameter dalam
+path atau untuk metode HTTP tertentu, kode yang ditulis cukup panjang. Karenanya biasanya, pengguna
+Go memakai router seperti `go-chi/chi` atau `gorilla/mux` untuk mempermudah menangani __request__
+HTTP dan juga untuk membuat __filter__ dan __middleware__ menjadi lebih mudah.
+
+Dengan menggunakan `chi`, kode di atas bisa diubah menjadi sebagai berikut:
+
+[source,go,linenums]
+----
+include::{sourcedir}/webserver/main.go[]
+----
+
+Kodenya memang lebih panjang, tetapi gunanya lebih banyak. Pertama tidak perlu ada __parsing__ untuk
+path untuk mencocokkan handler mana untuk path mana. Selain itu, kita juga punya __middleware__ yang
+akan mengolah __header__ untuk mendapatkan alamat IP, membuatkan RequestID, dan menuliskan __log__
+ke terminal untuk setiap __request__.
+
 === Latihan
+
+. Buat program dengan Go untuk kasus FizzBuzz, di mana jika suatu bilangan yang dimasukkan ke
+terminal bisa dibagi 3 maka akan ditulis "Fizz", sementara kalo bias dibagi lima maka ditulis "Buzz"
+dan bila bisa dibagi 3 **dan** 5 akan ditulis "FizzBuzz".
 
 
