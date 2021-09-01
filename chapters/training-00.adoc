@@ -878,4 +878,7 @@ ke terminal untuk setiap __request__.
 terminal bisa dibagi 3 maka akan ditulis "Fizz", sementara kalo bias dibagi lima maka ditulis "Buzz"
 dan bila bisa dibagi 3 **dan** 5 akan ditulis "FizzBuzz".
 
+. Buat program dengan Go untuk kasus __stack__ dan __queue__ menggunakan array atau slice. Gunakan
+fungsi `push` dan `pop` untuk __stack__ dan `enqueue` dan `dequeue` untuk __queue__.
 
+. Buat program dengan Go untuk menampilkan `n` bilangan fibonacci pertama.
