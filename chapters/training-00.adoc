@@ -1,6 +1,9 @@
 == Perkenalan
 :sourcedir: ../sources
 
+> Go is an attempt to combine the safety and performance of statically typed languages with the
+> convenience and fun of dynamically typed interpretative languages. -- Rob Pike
+
 === Persiapan Lingkungan Pengembangan
 
 Sebelum memulai kursus ini, saya pastikan kita memakai editor dan versi SDK go yang sama. Editor

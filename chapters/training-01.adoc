@@ -1,5 +1,8 @@
 == Dasar Rekayasa Perangkat Lunak.
 
+> Any fool can write code that a computer can understand. Good programmers write code that humans
+> can understand. -- Martin Fowler
+
 Di modul ini kita akan membahas secara singkat tentang rekayasa perangkat lunak. Rekayasa
 perangkat lunak lebih dari sekadar menulis program. Rekayasa perangkat lunak adalah menerjemahkan
 __requirement__ menjadi perangkat lunak. Dalam rekayasa perangkat lunak ini ada beberapa praktik

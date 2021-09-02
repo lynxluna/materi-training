@@ -1,5 +1,9 @@
 == Analisa Entitas dan Lifecycle
 
+> To communicate effectively, the code must be based on the same language used to write the
+> requirements—the same language that the developers speak with each other and with domain experts.
+> - Eric Evans
+
 === Pendaftaran, Otentifikasi dan Otorisasi 
 
 === Tentang Object Lifecycle 

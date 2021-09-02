@@ -1,5 +1,8 @@
 == Deployment
 
+> The key in such a transition to continuous delivery is to expect things to get worse before you’ll
+> be able to make them better - Matthias Marschall
+
 === Trunk Based Development 
 
 === Tentang Deployment dan CI/CD
