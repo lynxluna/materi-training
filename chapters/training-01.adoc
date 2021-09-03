@@ -300,7 +300,7 @@ type Article struct {
 }
 
 func (a Article) IsNil() bool {
-  return a.ID == uuid.NilID && len(a.Title) == 0 && len(a.Content) == 0
+  return a.ID == uuid.Nil && len(a.Title) == 0 && len(a.Content) == 0
 }
 
 func createArticleWithID(id uuid.UUID, title, content string) (Article, error) {
@@ -382,47 +382,51 @@ menyebabkan __state__ nya tidak valid.
 ----
 
 func TestCreateArticle(t *testing.T) {
-  // article yang dianggap nil (karena bukan pointer)
-  var nilArticle Article
-  require.True(t, nilArticle.IsNil())
-  
-  // id yang pasti dianggap valid
-  id := uuid.MustParse("836f6aa2-ed56-437a-aee1-eff92cf4ee4d")
-  
-  // tabel test
-  tests := []struct {
-    // nama test 
-    Name	string 
-    // input
-    Title	string
-    Content	string
-    // output
-    Result	Article
-    Err		error
-  }{
-    {"EmptyTitleContent", "", "", nilArticle, ErrEmptyTitle},
-    {"EmptyTitleOnly", "", validContent, nilArticle, ErrEmptyTitle},
-    {"EmptyContent", validTitle, "", nilArticle, ErrEmptyContent},
-    {"ShortTitle", "short", validContent, ErrTitleTooShort},
-    {"ShortContent", validTitle, "short", ErrContentTooShort},
-    {"TooLongTitle", longTitle, validContent, ErrTitleTooLong},
-    {"ValidArticle", validTitle, validContent, nil},
-  }
+	// article yang dianggap nil (karena bukan pointer)
+	var nilArticle Article
+	require.True(t, nilArticle.IsNil())
 
-  // Test dijalankan satu-satu dari tabel
-  for _, item := range tests {
-    t.Run(item.Name, func(t *testing.T) {
-      article, err := createArticleWithID(id, item.Title, item.Content)
-      assert.Equal(t, item.Err, err)
+	// id yang pasti dianggap valid
+	id := uuid.MustParse("836f6aa2-ed56-437a-aee1-eff92cf4ee4d")
+
+	validArticle, err := createArticleWithID(id, validTitle, validContent)
+	require.NoError(t, err)
+
+	// tabel test
+	tests := []struct {
+		// nama test
+		Name string
+		// input
+		Title   string
+		Content string
+		// output
+		Result Article
+		Err    error
+	}{
+		{"EmptyTitleContent", "", "", nilArticle, ErrEmptyTitle},
+		{"EmptyTitleOnly", "", validContent, nilArticle, ErrEmptyTitle},
+		{"EmptyContent", validTitle, "", nilArticle, ErrEmptyContent},
+		{"ShortTitle", "short", validContent, nilArticle, ErrTitleTooShort},
+		{"ShortContent", validTitle, "short", nilArticle, ErrContentTooShort},
+		{"TooLongTitle", longTitle, validContent, nilArticle, ErrTitleTooLong},
+		{"ValidArticle", validTitle, validContent, validArticle, nil},
+	}
+
+	// Test dijalankan satu-satu dari tabel
+	for _, item := range tests {
+		t.Run(item.Name, func(t *testing.T) {
+			article, err := createArticleWithID(id, item.Title, item.Content)
+			assert.Equal(t, item.Err, err)
 
       if item.Err == nil {
-        assert.Equal(t, item.Result, article)
-        assert.LessOrEqual(t, time.Now().Sub(article.CreatedAt), 5 * time.Second)
-        assert.False(t, item.Result.IsNil())
-      }
-      
-    }
-  }
+				assert.Equal(t, item.Result.ID, article.ID)
+				assert.Equal(t, item.Result.Title, article.Title)
+				assert.Equal(t, item.Result.Content, article.Content)
+				assert.LessOrEqual(t, time.Now().Sub(article.CreatedAt), 5*time.Second)
+				assert.False(t, item.Result.IsNil())
+			}
+		})
+	}
 }
 ----
 
@@ -437,7 +441,7 @@ func validateTitle(title string) error {
   const minTitleLength = 10
   const maxTitleLength = 500
   
-  runeCount = utf8.RuneCountInString(title)
+  runeCount := utf8.RuneCountInString(title)
 
   if runeCount == 0 {
     return ErrEmptyTitle 
@@ -466,7 +470,7 @@ func TestValidateTitle(t *testing.T) {
   }{
     {"Empty", "", ErrEmptyTitle},
     {"TooShort", "too-short", ErrTitleTooShort},
-    {"TooLong", "too-long", ErrTitleTooLong},
+    {"TooLong", longTitle, ErrTitleTooLong},
     {"Valid", validTitle, nil},
   }
 
@@ -484,7 +488,7 @@ func TestValidateTitle(t *testing.T) {
 func validateContent(content string) error {
   const minContentLength = 200 
 
-  runeCount = utf8.RuneCountInString(content)
+  runeCount := utf8.RuneCountInString(content)
 
   if runeCount == 0 {
     return ErrEmptyContent
@@ -516,7 +520,7 @@ func TestValidateContent(t *testing.T) {
   for _, item := range tests {
     t.Run(item.Name, func(t *testing.T) {
       assert.Equal(t, item.Err, validContent(item.Content))
-    }
+    })
   }
 }
 ----

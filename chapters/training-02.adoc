@@ -41,27 +41,47 @@ akan kita pakai di keseluruhan modul training ini.
 Bentuk arsitektur onion ini banyak sekali. Robert C Martin (Uncle Bob) mendesain apa yang dia sebut
 dengan __Clean Architecture__. Alistair Cockburn dengan __Hexagonal Architecture__.
 
-.Hexagonal dan Onion
+.Heksagonal dan Onion
 image::hexonion.svg[HexaGoninon, 900]
 
-=== Pattern dan Implementasi Komponen Abstrak
+Dalam arsitektur heksagonal atau __onion__ seperti di atas, lapisan terdalam tidak ada pengetahuan
+apapun atas lapisan terluarnya. Yang kita kerjakan di <<Dasar Rekayasa Perangkat Lunak>> adalah inti
+dari arsitektur ini, yaitu di lapisan entitas, atau sering disebut lapisan domain atau __domain
+layer__. Domain layer ini biasanya hanya berupa entitas dan objek saja dan tidak ada konteks maupun
+pengetahuan terhadap penyimpanan maupun protokol jaringan.
 
-==== Lapisan penyimpanan
+[NOTE]
+.Mengenai jumlah lapisan
+====
+Jumlah lapisan bisa juga lebih dari yang di gambar. Begitu pula mungkin saja beberapa lapisan
+digabungkan atau ditambahkan.
+====
 
-===== Repository Pattern
+=== Lapisan penyimpanan
 
-===== Implementasi Repository Pattern Yang Idiomatic di Go
+Lapisan penyimpanan ini adalah lapisan yang menjembatani transfer data dari penyimpanan dan __domain
+layer__. Lapisan ini bisa mencari dan menyimpan entitas yang sudah didefinisikan di __domain
+layer__. __Pattern__ yang biasa dipakai adalah
+https://martinfowler.com/eaaCatalog/repository.html[__Repository Pattern__]. Pola (__pattern__)
+memisahkan domain dan kode untuk mengambil entitas berdasarkan kriteria atau predikat tertentu.
 
-==== Lapisan Aplikasi
+Umumnya sebuah __repository__ harus:
 
-===== Protokol yang digunakan di level Aplikasi
+. Bisa mencari entitas berdasar kriteria tertentu, misalnya __ID__.
+. Bisa menyimpan entitas secara keseluruhan.
 
-====== HTTP
+==== Implementasi Lapisan Penyimpanan
 
-====== Protocol Buffer dan gRPC
+Selanjutnya, kita akan mengimplementasikan lapisan penyimpanan dengan membuat __in memory store__
+atau penyimpanan yang hanya akan menyimpan di dalam memori. Alasan saya memakai ini adalah untuk
+menunjukkan bahwa lapisan penyimpanan bisa apa saja, termasuk memori, tidak harus basis data.
 
-===== Implementasi HTTP Handler Sebagai __Application Layer__
-
+[source,go]
+.memstore.go
+----
+type MemStore struct {
+}
+----
 
 === Latihan
 
