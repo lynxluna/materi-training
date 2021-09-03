@@ -1,2 +1,154 @@
 == Lapisan Use Case dan Infrastruktur
 
+> Playing football is very simple, but playing simple football is the hardest thing there is. --
+> Johan Cruyff
+
+=== Lapisan __Use Case__
+
+Lapisan __use case__ adalah lapisan yang berisi **logika bisnis spesifik untuk aplikasi tersebut**.
+Lapisan ini yang mengatur aliran data dari dan ke entitas. Perubahan lapisan ini seharusnya tidak
+mempengaruhi lapisan domain. Lapisan ini juga tidak mengerti dan bergantung tentang UI atau
+__framework__ apapun. 
+
+Dari training awal di bab 1 kita sudah punya __story__ sebagai berikut:
+
+[cols="1,2,5,8"]
+.**User Stories** untuk aplikasi blog
+|===
+| No |Sebagai | saya ingin | sehingga
+
+| 1
+| Penulis
+| menambahkan artikel baru
+| artikel tersebut bisa dibaca oleh pembaca
+
+| 2
+| Penulis
+| menyunting artikel saya
+| artikel yang baru bisa dibaca oleh pembaca
+
+| 3
+| Pembaca
+| melihat judul semua artikel yang ada
+| saya bisa memilih artikel mana yang mau dibaca
+
+| 4
+| Pembaca 
+| memilih satu artikel
+| saya bisa membaca satu artikel tersebut
+
+|===
+
+Kita akan mengimplementasikan __story-story__ tersebut satu-persatu. Pada story nomor 1, kita sudah
+mengimplementasikan operasi pembuatan artikel di domain layer. Sekarang kita akan mengintegrasikan
+lapisan penyimpanan dan domain untuk mencapai satu __use case__ yang tertera dalam __story__ di
+atas.
+
+Todo: data flow
+
+Kita akan buat __prototype__ dari __Use Case__ pertama. Karena kita tidak peduli implementasi detil
+dari lapisan penyimpanan kita, yang kita inginkan hanya **operasinya**. Kita definisikan dua
+__interface__ yaitu `ArticleFinder` untuk mencari artikel `ArticleSaver` untuk menyimpan artikel.
+Isi dari methodnya kita salin saja.
+
+[source,go,linenums]
+.article_use_case.go
+----
+type ArticleFinder interface {
+  FindArticleByID(ctx context.Context, id uuid.UUID) (Article, error) {
+}
+
+type ArticleSaver interface {
+  SaveArticle(ctx context.Context, article Article) error
+}
+
+type ArticleFinderSaver interface {
+  ArticleFinder
+  ArticleSaver
+}
+
+type ArticleUseCase struct {
+  store ArticleFinderSaver 
+}
+
+var ErrNilStore = errors.NewError("store cannot be nil")
+
+func NewArticleUseCase(store ArticleFinderSaver) (*ArticleUseCase, error) {
+  if store == nil {
+    return nil, ErrNilStore
+  }
+
+  return &ArticleUseCase{store: store}, nil
+}
+----
+
+Alasan dari pembagian beberapa interface sekaligus adalah supaya kita bisa membagi implementasi
+untuk operasi baca dan tulis di lapisan penyimpanan yang berbeda. Misal ditulis di RDBMS dan dibaca
+lewat ElasticSearch.
+
+Kita implementasikan kasus pertama, pembuatan artikel
+
+[source,go,linenums]
+.article_use_case.go
+----
+func (uc *ArticleUseCase) CreateArticle(ctx context.Context, title, content string) error {
+  newArticle, err := CreateArticle(title, content)
+
+  if err != nil {
+    return err
+  }
+
+  return uc.store.Save(ctx, newArticle) 
+}
+----
+
+Dan kita akan menulis kode pengujian untuk use case pertama.
+
+[source,go,linenums]
+.article_use_case_test.go
+----
+func TestArticleUseCaseCreate(t *testing.T) {
+  ctx := context.Background()
+
+  mem, err := CreateMemStore()
+
+  require.NoError(t, err)
+
+  uc := NewArticleUseCase(mem)
+   
+	// tabel test, diambil dari pengujian di domain layer
+	tests := []struct {
+		// nama test
+		Name string
+		// input
+		Title   string
+		Content string
+		// output
+		Result Article
+		Err    error
+	}{
+		{"EmptyTitleContent", "", "", nilArticle, ErrEmptyTitle},
+		{"EmptyTitleOnly", "", validContent, nilArticle, ErrEmptyTitle},
+		{"EmptyContent", validTitle, "", nilArticle, ErrEmptyContent},
+		{"ShortTitle", "short", validContent, nilArticle, ErrTitleTooShort},
+		{"ShortContent", validTitle, "short", nilArticle, ErrContentTooShort},
+		{"TooLongTitle", longTitle, validContent, nilArticle, ErrTitleTooLong},
+		{"ValidArticle", validTitle, validContent, validArticle, nil},
+	}
+
+  for _, item := range tests {
+    t.Run(item.Name, func(t *testing.T) {
+      err := uc.CreateArticle(ctx, item.Title, item.Content)
+      assert.Equal(t, item.Err, err)
+
+      if item.Err == nil {
+        a, err = mem.FindArticleByID(ctx, item.Result.ID) 
+        
+        if assert.NoError(t, err) {
+          assert.Equal(t, item.Result, a)
+        }
+      }
+    })
+  }
+}
+----

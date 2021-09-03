@@ -28,6 +28,21 @@ func CreateMemStore() *MemStore {
 	}
 }
 
+// Fill With Items
+
+func (s *MemStore) FillArticle(articles ...Article) {
+	if len(articles) == 0 {
+		return
+	}
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	for _, a := range articles {
+		s.articles[a.ID] = a
+	}
+}
+
 // Menyimpan satu artikel
 func (s *MemStore) SaveArticle(ctx context.Context, article Article) error {
 	s.lock.Lock()
