@@ -1,4 +1,4 @@
-= Modul Pelatihan Pembuatan Produk Dengan Menggunakan Go
+= Modul Pelatihan Dari Story Ke Kode: Edisi Backend Dengan Golang
 :author: Didiet Noor
 :email: dnoor@retrocoding.net
 :toc:
