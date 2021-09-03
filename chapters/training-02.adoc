@@ -33,6 +33,17 @@ perubahannya perlu koordinasi dengan tim lain.
 
 === Onion / Heksagonal
 
+Arsitektur __Onion__ atau __Heksagonal__ sedikit berbeda dengan arsitektur tiga tingakt. Arsitektur
+tiga tingkat mengklaim bahwa dependensi paling ujung adalah lapisan penyimpanan atau __storage__.
+Arsitektur onion dan heksagonal menempatkan __domain__ sebagai lapisan terdalam. Arsitektur ini yang
+akan kita pakai di keseluruhan modul training ini.
+
+Bentuk arsitektur onion ini banyak sekali. Robert C Martin (Uncle Bob) mendesain apa yang dia sebut
+dengan __Clean Architecture__. Alistair Cockburn dengan __Hexagonal Architecture__.
+
+.Hexagonal dan Onion
+image::hexonion.svg[HexaGoninon, 900]
+
 === Pattern dan Implementasi Komponen Abstrak
 
 ==== Lapisan penyimpanan
