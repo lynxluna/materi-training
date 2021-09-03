@@ -77,11 +77,185 @@ atau penyimpanan yang hanya akan menyimpan di dalam memori. Alasan saya memakai 
 menunjukkan bahwa lapisan penyimpanan bisa apa saja, termasuk memori, tidak harus basis data.
 
 [source,go]
-.memstore.go
+.mem_store.go
 ----
 type MemStore struct {
+  // .. kita akan mengisi ini nanti
+}
+
+// Create A MemStore 
+
+func CreateMemStore() *MemStore {
+  return &MemStore{
+  }
 }
 ----
 
+===== Membuat Kode Penguji 
+
+Sebelum kita mengisi, kita tulis dulu saja testnya karena kita sudah tahu __behaviour__ yang kita
+inginkan yaitu:
+
+. Bisa menyimpan artikel secara keseluruhan 
+. Bisa mencari artikel berdasarkan ID
+
+[source,go]
+.mem_store_test.go
+----
+include::{sourcedir}/article/mem_store_test.go[]
+----
+
+===== Membuat __Skeleton__ untuk `MemStore`
+
+Kita buat __skeletonnya__ dulu, tapi implementasikan dengan mengimbalikan galat karena belum
+terimplementasi dengan mendefinisikan kesalahan pertama yaitu: `ErrNotImplemented` yang berarti
+mengembalikan galat bahwa method belum terimplementasi. Kita memakai `context.Context` karena kita
+berasumsi bahwa nantinya request ini bisa di-__cancel__.
+
+[source,go,linenums,highlight="1,12-15,16-18"]
+.mem_store.go
+----
+var ErrNotImplemented = errors.New("method not yet implemented")
+
+type MemStore struct {
+  
+}
+
+func CreateMemStore() *MemStore {
+  return &MemStore{
+  }
+}
+
+func (m *MemStore) FindArticleByID(ctx context.Context, id uuid.UUID) (Article, error) {
+  return Article{}, ErrNotImplemented 
+}
+
+func (m *MemStore) SaveArticle(ctx context.Context, article Article) error {
+  return ErrNotImplemented
+}
+----
+
+Jika kita jalankan, maka testnya akan gagal karena kita belum berhasil menyimpan
+
+[source]
+----
+> go test -run TestMemStore .
+
+--- FAIL: TestMemStore (0.00s)
+    mem_store_test.go:22:
+                Error Trace:    mem_store_test.go:22
+                Error:          Received unexpected error:
+                                method not yet implemented
+                Test:           TestMemStore
+FAIL
+FAIL    course/article  0.370s
+FAIL
+----
+
+===== Mengimplementasikan Penyimpanan Dengan Menggunakan Map
+
+Ada beberapa cara mengimplementasikan memory store ini. Bisa dengan list atau map. Kita akan memakai
+map untuk keperluan kali ini. Karena map dalam go itu tidak __atomic__, kita perlu menambahkan
+`*sync.RWLock` untuk menjaga konsistensi map dan menghindari __data race__.
+
+[source,go]
+.mem_store.go
+----
+type MemStore struct {
+  articles	map[uuid.UUID]Article
+
+  lock *sync.RWMutex
+}
+----
+
+Kita implementasikan dahulu metode `SaveArticle`. Karena ini map, akan sangat kecil kemungkinan
+gagal.
+
+[source,go,linenums]
+.mem_store.go
+----
+
+var (
+  ErrNilArticle = errors.New("cannot save nil article")
+)
+
+func CreateMemStore() *MemStore {
+  return MemStore{
+    articles: make(map[uuid.UUID]Article),
+    lock: &sync.RWMutex{},
+  }
+}
+
+func (s *MemStore) SaveArticle(ctx context.Context, article Article) error {
+  s.Lock()
+  defer s.Unlock()
+
+  if article.IsNil() {
+    return ErrNilArticle
+  }
+
+  articles[article.ID] = article 
+
+  return nil
+}
+ 
+----
+
+Kita jalanan lagi testnya, dan masih gagal. Tapi pindah ke baris 25. Baris ini adalah metode untuk
+mencari artikel berdasarkan ID.
+
+[source]
+----
+> go run -run TestMemStore .
+
+--- FAIL: TestMemStore (0.00s)
+    mem_store_test.go:25:
+                Error Trace:    mem_store_test.go:25
+                Error:          Received unexpected error:
+                                method not yet implemented
+                Test:           TestMemStore
+FAIL
+FAIL    course/article  0.349s
+FAIL
+----
+
+===== Mengimplementasikan `FindArticleByID`
+
+Selanjutnya kita implementasikan `FindArticleByID`. Ada satu galat yang kita definisikan terlebih
+dahulu yaitu galat di mana ketika artikel tidak ditemukan.
+
+[source,go,linenums]
+.mem_store.go
+----
+
+var ErrArticleNotFound = errors.New("article not found")
+
+func (s *MemStore) FindArticleByID(ctx context.Context, id uuid.UUID) (Article, error) {
+  s.lock.RLock()
+  defer s.lock.RUnlock()
+
+  article, ok := s.articles[id] 
+
+  if !ok {
+    return Article{}, ErrArticleNotFound
+  }
+
+  return article, nil
+}
+
+----
+
+Dengan diimplementasikan kedua metode di atas maka, implementasi penyimpanan dengan map kita sudah
+selesai. Kode lengkapnya seperti ini:
+
+[source,go,linenums]
+.mem_store.go 
+----
+include::{sourcedir}/article/mem_store.go[]
+----
+
+
 === Latihan
 
+. Buatlah implementasi MemStore di atas dengan menggunakan Slice. **Petunjuk:** hati-hati dengan
+duplikasi ID ketika menyimpan.

@@ -17,7 +17,7 @@ type Article struct {
 }
 
 func (a Article) IsNil() bool {
-	return a.ID == uuid.Nil && len(a.Title) == 0 && len(a.Content) == 0
+	return a.ID == uuid.Nil || (len(a.Title) == 0 && len(a.Content) == 0)
 }
 
 var (
