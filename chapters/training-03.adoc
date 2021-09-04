@@ -10,7 +10,7 @@ Lapisan ini yang mengatur aliran data dari dan ke entitas. Perubahan lapisan ini
 mempengaruhi lapisan domain. Lapisan ini juga tidak mengerti dan bergantung tentang UI atau
 __framework__ apapun. 
 
-Dari training awal di bab 1 kita sudah punya __story__ sebagai berikut:
+Dari training awal di Bab 2, kita sudah punya __story__ sebagai berikut:
 
 [cols="1,2,5,8"]
 .**User Stories** untuk aplikasi blog
@@ -54,26 +54,26 @@ Isi dari methodnya kita salin saja.
 [source,go,linenums]
 .article_use_case.go
 ----
-type ArticleFinder interface {
+type ArticleFinder interface { // <1>
   FindArticleByID(ctx context.Context, id uuid.UUID) (Article, error) {
 }
 
-type ArticleSaver interface {
+type ArticleSaver interface { // <2>
   SaveArticle(ctx context.Context, article Article) error
 }
 
-type ArticleFinderSaver interface {
+type ArticleFinderSaver interface { // <3>
   ArticleFinder
   ArticleSaver
 }
 
-type ArticleUseCase struct {
-  store ArticleFinderSaver 
+type ArticleUseCase struct { <4>
+  store ArticleFinderSaver
 }
 
 var ErrNilStore = errors.NewError("store cannot be nil")
 
-func NewArticleUseCase(store ArticleFinderSaver) (*ArticleUseCase, error) {
+func NewArticleUseCase(store ArticleFinderSaver) (*ArticleUseCase, error) { <5>
   if store == nil {
     return nil, ErrNilStore
   }
@@ -81,42 +81,65 @@ func NewArticleUseCase(store ArticleFinderSaver) (*ArticleUseCase, error) {
   return &ArticleUseCase{store: store}, nil
 }
 ----
+<1> __Interface__ untuk `ArticleFinder`, apapun yang bisa 'mencari' artikel.
+<2> __Interface__ untuk `ArticleSaver`, apapun yang bisa 'menyimpan' artikel.
+<3> __Interface__ gabungan untuk memudahkan implementasi penyimpanan yang mengimplementasikan
+semuanya.
+<4> Deklarasi __Use Case__ di mana dia mengandung `store` yang mengimplementasikan
+`ArticleFinderSaver`. Use Case tidak perlu tau bentuk penyimpananannya seperti apa.
+<5> Konstruktor untuk membuat objek use case yang akan mengecek valid tidaknya `store`.
 
-Alasan dari pembagian beberapa interface sekaligus adalah supaya kita bisa membagi implementasi
+Alasan dari pembagian beberapa __interface__ sekaligus adalah supaya kita bisa membagi implementasi
 untuk operasi baca dan tulis di lapisan penyimpanan yang berbeda. Misal ditulis di RDBMS dan dibaca
 lewat ElasticSearch.
-
-Kita implementasikan kasus pertama, pembuatan artikel
 
 [source,go,linenums]
 .article_use_case.go
 ----
-func (uc *ArticleUseCase) CreateArticle(ctx context.Context, title, content string) error {
-  newArticle, err := CreateArticle(title, content)
+func (uc *ArticleUseCase) CreateArticle(ctx context.Context, title, content string) (Article, error) {
+  newArticle, err := CreateArticle(title, content) // <1>
 
   if err != nil {
-    return err
+    return Article{}, err
   }
 
-  return uc.store.Save(ctx, newArticle) 
+  err = uc.store.SaveArticle(ctx, newArticle) // <2>
+
+  if err != nil {
+    return Article{}, err
+  }
+
+  return newArticle, nil // <3>
 }
 ----
+<1> Buat artikel baru 
+<2> Lalu Simpan
+<3> Hanya kembalikan artikel jika berhasil.
 
-Dan kita akan menulis kode pengujian untuk use case pertama.
+Dan kita akan menulis kode pengujian untuk use case pertama. Input dan output yang kita uji kebetulan sama dengan
+kasus pembuatan article. Perbedaannya di sini kita sudah melibatkan `MemStore`. Kondisi yang kita
+uji adalah sebagai berikut:
+
+[Example]
+====
+. Jika judul atau konten tidak valid keluarkan galat.
+. Hanya buat jika judul dan kontennya valid.
+====
+
+Syarat untuk kasus nomor dua sama dengan syarat di lapisan domain, jadi kita tidak perlu menambahkan
+aturan baru lagi.
 
 [source,go,linenums]
 .article_use_case_test.go
 ----
-func TestArticleUseCaseCreate(t *testing.T) {
-  ctx := context.Background()
+func TestCreateArticleUseCase(t *testing.T) {
+	ctx := context.Background()
+	mem := CreateMemStore()
 
-  mem, err := CreateMemStore()
+	uc, err := NewArticleUseCase(mem)
+	require.NoError(t, err)
 
-  require.NoError(t, err)
-
-  uc := NewArticleUseCase(mem)
-   
-	// tabel test, diambil dari pengujian di domain layer
+	// tabel test
 	tests := []struct {
 		// nama test
 		Name string
@@ -124,31 +147,404 @@ func TestArticleUseCaseCreate(t *testing.T) {
 		Title   string
 		Content string
 		// output
-		Result Article
-		Err    error
+		Err error
 	}{
-		{"EmptyTitleContent", "", "", nilArticle, ErrEmptyTitle},
-		{"EmptyTitleOnly", "", validContent, nilArticle, ErrEmptyTitle},
-		{"EmptyContent", validTitle, "", nilArticle, ErrEmptyContent},
-		{"ShortTitle", "short", validContent, nilArticle, ErrTitleTooShort},
-		{"ShortContent", validTitle, "short", nilArticle, ErrContentTooShort},
-		{"TooLongTitle", longTitle, validContent, nilArticle, ErrTitleTooLong},
-		{"ValidArticle", validTitle, validContent, validArticle, nil},
+		{"EmptyTitleContent", "", "", ErrEmptyTitle},
+		{"EmptyTitleOnly", "", validContent, ErrEmptyTitle},
+		{"EmptyContent", validTitle, "", ErrEmptyContent},
+		{"ShortTitle", "short", validContent, ErrTitleTooShort},
+		{"ShortContent", validTitle, "short", ErrContentTooShort},
+		{"TooLongTitle", longTitle, validContent, ErrTitleTooLong},
+		{"ValidArticle", validTitle, validContent, nil},
 	}
 
-  for _, item := range tests {
-    t.Run(item.Name, func(t *testing.T) {
-      err := uc.CreateArticle(ctx, item.Title, item.Content)
-      assert.Equal(t, item.Err, err)
+	// Test dijalankan satu-satu dari tabel
+	for _, item := range tests {
+		t.Run(item.Name, func(t *testing.T) {
+			article, err := uc.CreateArticle(ctx, item.Title, item.Content)
+			assert.Equal(t, item.Err, err)
 
-      if item.Err == nil {
-        a, err = mem.FindArticleByID(ctx, item.Result.ID) 
-        
-        if assert.NoError(t, err) {
-          assert.Equal(t, item.Result, a)
-        }
-      }
-    })
+			if err != nil {
+				assert.True(t, article.IsNil())
+				return
+			}
+
+			result, err := mem.FindArticleByID(ctx, article.ID)
+
+			if assert.NoError(t, err) {
+				assert.Equal(t, article, result)
+			}
+		})
+	}
+}
+----
+
+Untuk __story__ no 2, kita implementasikan sebagai method baru di use case. Kali ini kita coba
+tuliskan pengujiannya terlebih dahulu. Di sini kita uji kasus-kasus sebagai berikut:
+
+[Example]
+====
+. Jika id nya tidak ada, maka keluarkan galat.
+. Jika judul dan konten tidak valid, keluarkan galat.
+. Hanya mengganti jika judul dan konten valid. 
+====
+
+[source,go,linenums,highlight="50-55"]
+.article_use_case_test.go
+----
+func TestEditArticleUseCase(t *testing.T) {
+	ctx := context.Background()
+	mem := CreateMemStore()
+
+	a, err := CreateArticle(validTitle, validContent)
+	require.NoError(t, err)
+
+	mem.FillArticle(a)
+
+	uc, err := NewArticleUseCase(mem)
+	require.NoError(t, err)
+
+	existID := a.ID
+	nonExistentID := uuid.MustParse("30339469-935b-4ab5-8816-d8a47450fe5f")
+
+	replaceContent := validContent[20:]
+	// tabel test
+	tests := []struct {
+		// nama test
+		Name string
+		// input
+		ID      uuid.UUID
+		Title   string
+		Content string
+		// output
+		Err error
+	}{
+		{"NonExistentID", nonExistentID, validTitle, replaceContent, ErrArticleNotFound},
+		{"EmptyTitleContent", existID, "", "", ErrEmptyTitle},
+		{"EmptyTitleOnly", existID, "", validContent, ErrEmptyTitle},
+		{"EmptyContent", existID, validTitle, "", ErrEmptyContent},
+		{"ShortTitle", existID, "short", validContent, ErrTitleTooShort},
+		{"ShortContent", existID, validTitle, "short", ErrContentTooShort},
+		{"TooLongTitle", existID, longTitle, validContent, ErrTitleTooLong},
+		{"ValidArticle", existID, validTitle, replaceContent, nil},
+	}
+
+	// Test dijalankan satu-satu dari tabel
+	for _, item := range tests {
+		t.Run(item.Name, func(t *testing.T) {
+			err := uc.EditArticle(ctx, item.ID, item.Title, item.Content)
+			assert.Equal(t, item.Err, err)
+
+			if err != nil {
+				return
+			}
+
+			a, err := mem.FindArticleByID(ctx, item.ID)
+
+			if !assert.NoError(t, err) {
+				return
+			}
+
+			assert.Equal(t, item.Title, a.Title)
+			assert.Equal(t, item.Content, a.Content)
+		})
+	}
+}
+----
+
+Lalu kita implementasikan metode `EditArticle`  
+
+[source,go,linenums]
+.article_use_case.go
+----
+func (uc *ArticleUseCase) EditArticle(ctx context.Context, id uuid.UUID, newTitle, newContent string) error {
+	article, err := uc.store.FindArticleByID(ctx, id) // <1>
+	if err != nil {
+		return err
+	}
+
+	if err = article.EditArticle(newTitle, newContent); err != nil { // <2>
+		return err
+	}
+
+	return uc.store.SaveArticle(ctx, article) // <3>
+}
+----
+<1> Baca artikel dari lapisan penyimpanan yang mengimplementasikan `ArticleFinder`.
+<2> Eksekusi mutasi dari lapisan domain.
+<3> Simpan perubahan artikel ke lapisan penyimpanan yang mengimplementasikan `ArticleSaver`.
+
+=== Lapisan Aplikasi / Infrastruktur / __Framework__
+
+Lapisan ini adalah lapisan yang berhubungan dengan dunia luar. Di sinilah protokol seperti HTTP dan
+gRPC dipakai. Lapisan ini membungkus lapisan __use case__ supaya bisa diakses oleh dunia luar.
+Lapisani ini biasanya kodenya agak sedikit banyak.
+
+Contoh yang dilakukan di lapisan ini antara lain 
+
+- Memproses dan menanggapi __request__ dan __response__ HTML.
+- Mensanitasi __input__ dari pengguna.
+- Serialisasi dan Deserialisasi (JSON, biner, gob, dan lain-lain)
+
+Untuk mengimplementasi lapisan ini, kita akan memakai `net/http` dan
+https://go-chi.io/[`chi`,window=_blank], pustaka untuk keperluan __routing__ dan __middleware__.
+Sebelum mengimplementasikan saya akan membuat __scaffolding__ untuk keperluan ini. __Scaffolding__
+ini akan berisi sebagai berikut:
+
+. Sebuah struktur yang mewakili HTTP dan REST server. Saya akan namai `HTTPServer`. Struktur
+ini akan berisi objek use case dan metode-metode untuk menangani __request__ dan __response__ HTTP.
+. Sebuah fungsi `main` yang akan menjalankan server tersebut. Fungsi ini akan menyiapkan
+routing, logging, dan middleware yang akan dipakai oleh keseluruhan program.
+
+[source,go,linenums]
+.server.go
+----
+package main
+
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/go-chi/chi/v5" //<1>
+	"github.com/go-chi/chi/v5/middleware"
+)
+
+type HTTPServer struct { //<2>
+	port uint16
+	host string
+
+	router *chi.Mux
+}
+
+func NewHTTPServer(options ...func(*HTTPServer) error) (*HTTPServer, error) { // <3>
+	r := chi.NewRouter()
+
+	r.Use(middleware.Logger) // <4>
+	r.Use(middleware.Recoverer)
+
+	httpServer := &HTTPServer{
+		host:   "127.0.0.1",
+		port:   8000,
+		router: r,
+	}
+
+	if len(options) == 0 {
+		return httpServer, nil
+	}
+
+	for _, opt := range options { <5>
+		if err := opt(httpServer); err != nil {
+			return nil, err
+		}
+	}
+
+	return httpServer, nil
+}
+
+func (s *HTTPServer) Start() {
+	listen := fmt.Sprintf("%s:%d", s.host, s.port)
+
+	http.ListenAndServe(listen, s.router)
+}
+
+----
+<1> Impor `chi` dan middlewarenya ke dalam program.
+<2> HTTP server isinya hanya `host` `port` dan `router`.
+<3> Fungsi untuk membuat objek `HTTPServer` dengan
+https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis[__functional options__]
+supaya kita punya __default__.
+<4> Middleware yang kita pakai, `Logger` untuk menampilkan request dan response, `Recoverer` untuk
+mengatasi jika ada `panic`
+<5> Eksekusi __functional options__ jika ada.
+<6> Main program di sini kita jalankan objek `HTTPServer` tadi.
+
+Dan sebuah fungsi `main` yang isinya cukup pendek.
+
+[source,go,linenums]
+.main.go
+----
+func main() {
+	server, err := NewHTTPServer()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+  
+  
+  log.Printf("Server dijalankan di %s port %d ...", server.host, server.port)
+	server.Start()
+}
+----
+
+Sebelum kita lanjutkan, kita coba jalankan dulu dengan `go run`.
+
+[source]
+----
+> go run .
+
+2021/09/04 23:55:53 Server dijalankan di 127.0.0.1 port 8000 ...
+
+----
+
+Dan kita coba tes dengan menggunakan https://curl.haxx.se[curl] di window/tab yang lain.
+
+[source]
+----
+> curl -v 127.0.0.1:8000 
+
+*   Trying 127.0.0.1:8000...
+* Connected to 127.0.0.1 (127.0.0.1) port 8000 (#0)
+> GET / HTTP/1.1 <1>
+> Host: 127.0.0.1:8000
+> User-Agent: curl/7.78.0
+> Accept: */*
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 404 Not Found <2>
+< Content-Type: text/plain; charset=utf-8
+< X-Content-Type-Options: nosniff
+< Date: Sat, 04 Sep 2021 16:57:19 GMT
+< Content-Length: 19
+<
+404 page not found <3>
+* Connection #0 to host 127.0.0.1 left intact
+----
+<1> __Request__ yang dikirim.
+<2> __Response__ yang didapat.
+<3> __Body__ dari __response__ yang dikembalikan server.
+
+==== Menyiapkan __Handler__ dan __Use Case__
+
+Di sub bagian ini kita akan menggabungkan seluruh lapisan yang kita sudah buat sebelumnya menjadi
+sebuah REST API. Kita akan mengimplementasikan HTTP handler sebagai berikut
+
+[cols="2,1,5"]
+.REST __Endpoint__ untuk dua __use case__
+|===
+| Path | Metode | Deskripsi 
+
+.2+| `/articles`
+
+| `POST` 
+| Membuat satu artikel baru 
+
+| `PUT` 
+| Mengedit satu artikel 
+
+|===
+
+Kita tambahkan dulu lapisan __use case__ ke dalam `HTTPServer`
+
+[source,go]
+----
+type HTTPServer struct {
+  // tambahkan use case ke sini
+  uc *ArticleUseCase 
+  // ...
+}
+
+func NewHTTPServer(options ... func(*HTTPServer) error) (*HTTPServer, error){
+  memStore := CreateMemStore()
+  uc, err := NewArticleUseCase(memStore)
+
+  if err != nil {
+    return nil, err 
+  }
+
+  // ... lalu assign ke dalam httpServer
+  
+  httpServer := &HTTPServer {
+    uc: uc,
+    // ...
   }
 }
 ----
+
+Kita setuju baik untuk __payload__ maupun __response__ keduanya akan memakai format JSON, termasuk
+dengan galat. Supaya mudah untuk mengirimkan galat sebagai response, kita membuat fungsi yang akan
+membungkus galat sebagai JSON.
+
+[source,go,linenums]
+----
+func writeError(w http.ResponseWriter, status int, err error) {
+	w.WriteHeader(status)
+	wrapper := struct {
+		Message string `json:"message"`
+	}{Message: err.Error()}
+	json.NewEncoder(w).Encode(wrapper)
+}
+----
+
+Dengan ini kita bisa menuliskan dua metode yang nantinya akan menangani request dan response untuk
+kedua use case tadi.
+
+[source,go,linenums]
+----
+func (s *HTTPServer) NewArticleHandler(w http.ResponseWriter, r *http.Request) {
+	writeError(w, http.StatusNotImplemented, ErrNotImplemented)
+}
+
+func (s *HTTPServer) EditArticleHandler(w http.ResponseWriter, r *http.Request) {
+	writeError(w, http.StatusNotImplemented, ErrNotImplemented)
+}
+----
+
+Untuk memudahkan membuat route, kita akan buat sebuah fungsi utilitas `setupRoute` di `HTTPServer`
+yang nantinya akan dipanggil di `NewHTTPServer` setelah konstruksi strukturnya.
+
+[source,go,linenums]
+----
+func (s *HTTPServer) setupRoute() { // <1>
+  r := s.router 
+
+  r.Post("/articles", s.NewArticleHandler)
+  r.Put("/articles/{articleID}", s.EditArticleHandler) <2>
+}
+
+
+func NewHTTPServer(options ...func(*HTTPServer) error) (*HTTPServer, error) {
+	// ...
+
+  httpServer := &HTTPServer{
+		host:   "127.0.0.1",
+		port:   8000,
+		router: r,
+		uc:     uc,
+	}
+
+	httpServer.setupRoute() // <2>
+
+  // ...
+}
+----
+<1> Definisi fungsi utilitas untuk men-setup route.
+<2> `{articleID}` adalah path parameter yang akan di-__parse__ oleh chi nanti.
+<3> Dipanggil di sini
+
+Dan jika kita jalankan dengan `curl` ke __path__ `/articles` hasilnya kurang lebih sebagai berikut:
+
+[source]
+----
+> curl -XPOST -v 127.0.0.1:8000/articles
+
+*   Trying 127.0.0.1:8000...
+* Connected to 127.0.0.1 (127.0.0.1) port 8000 (#0)
+> POST /articles HTTP/1.1
+> Host: 127.0.0.1:8000
+> User-Agent: curl/7.78.0
+> Accept: */*
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 501 Not Implemented <1>
+< Date: Sat, 04 Sep 2021 17:25:44 GMT
+< Content-Length: 41
+< Content-Type: text/plain; charset=utf-8
+<
+{"message":"method not yet implemented"} <2>
+----
+<1> HTTP Status
+<2> Galat yang sudah dibungkus dan menghasilkan JSON
+
+==== Mengimplementasikan dan menguji __Handler__
+
+

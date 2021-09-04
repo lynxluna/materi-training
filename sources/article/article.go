@@ -91,3 +91,18 @@ func CreateArticle(title, content string) (Article, error) {
 	}
 	return createArticleWithID(newId, title, content)
 }
+
+func (a *Article) EditArticle(title, content string) error {
+	if err := validateTitle(title); err != nil {
+		return err
+	}
+
+	if err := validateContent(content); err != nil {
+		return err
+	}
+
+	a.Title = title
+	a.Content = content
+
+	return nil
+}

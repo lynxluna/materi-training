@@ -10,6 +10,7 @@
 :note-caption: Catatan
 :warning-caption: Peringatan
 :source-highlighter: pygments
+:icons: font
 
 :sectnums:
 
