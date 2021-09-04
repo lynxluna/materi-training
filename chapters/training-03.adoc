@@ -545,7 +545,7 @@ Dan jika kita jalankan dengan `curl` ke __path__ `/articles` hasilnya kurang leb
 <1> HTTP Status
 <2> Galat yang sudah dibungkus dan menghasilkan JSON
 
-==== Mengimplementasikan dan menguji __Handler__
+==== Mengimplementasikan __Handler__
 
 [WARNING]
 ====
@@ -634,3 +634,8 @@ func (s *HTTPServer) NewArticleHandler(w http.ResponseWriter, r *http.Request) {
 <2> __Payload__ yang kita terima dari __request__.
 <3> Jalankan __behaviour__ dari Use Case.
 <4> Kembalikan hanya hasil yang berupa side effect.
+
+==== Menguji __Handler__
+
+Sebelum kita jalankan servernya, kita perlu membuat pengujian. Di dalam `net/http` dalam Go sudah
+ada __package__ `httptest` sehingga kita bisa menguji input dan output dari handler ini. 
