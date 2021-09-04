@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -68,14 +70,49 @@ func (s *HTTPServer) Start() {
 
 func writeError(w http.ResponseWriter, status int, err error) {
 	w.WriteHeader(status)
+	w.Header().Add("content-type", "application/json")
 	wrapper := struct {
 		Message string `json:"message"`
 	}{Message: err.Error()}
 	json.NewEncoder(w).Encode(wrapper)
 }
 
+func writeJSON(w http.ResponseWriter, status int, payload interface{}) {
+	w.WriteHeader(status)
+	w.Header().Add("content-type", "application/json")
+	json.NewEncoder(w).Encode(payload)
+}
+
+var (
+	ErrInvalidRequestPayload = errors.New("the request payload is invalid")
+)
+
 func (s *HTTPServer) NewArticleHandler(w http.ResponseWriter, r *http.Request) {
-	writeError(w, http.StatusNotImplemented, ErrNotImplemented)
+	var payload struct {
+		Title   string `json:"title"`
+		Content string `json:"content"`
+	}
+	ctx := r.Context()
+
+	err := json.NewDecoder(r.Body).Decode(&payload)
+
+	if err != nil {
+		writeError(w, http.StatusBadRequest, ErrInvalidRequestPayload)
+		return
+	}
+
+	article, err := s.uc.CreateArticle(ctx, payload.Title, payload.Content)
+
+	if err != nil {
+		writeError(w, http.StatusUnprocessableEntity, err)
+	}
+
+	result := struct {
+		ID        string `json:"id"`
+		CreatedAt string `json:"created_at"`
+	}{article.ID.String(), article.CreatedAt.Format(time.RFC3339)}
+
+	writeJSON(w, http.StatusCreated, result)
 }
 
 func (s *HTTPServer) EditArticleHandler(w http.ResponseWriter, r *http.Request) {

@@ -547,4 +547,90 @@ Dan jika kita jalankan dengan `curl` ke __path__ `/articles` hasilnya kurang leb
 
 ==== Mengimplementasikan dan menguji __Handler__
 
+[WARNING]
+====
+Implementasi yang ada di sini tidak memikirkan soal keamanan. Validasi yang ada hanya untuk
+memastikan tidak ada __state__ yang invalid dan. Keamanan dan sanitasi __input__ akan dibahas di Bab
+selanjutnya. Jangan menggunakan kode yang ada di sini untuk kepentingan __production__.
+====
 
+Kita implementasikan pembuatan artikel. Pembuatan artikel ini mempunyai spesifikasi sebagai berikut.
+Semua __request__ dan __response__ menggunakan `content-type` : `application/json`.
+
+[cols="1,1,3,1,3"]
+.Spesifikasi endpoint
+|===
+| __Path__ | Metode HTTP | Contoh Payload 2+| Respons 
+
+.5+| `/articles`
+.5+| `POST`
+.5+a| [source,json]
+----
+{
+ "title": "ini judul sebuah artikel", 
+ "content":"lorem ipsum dolor sit amit-amit"
+}
+----
+| `201 Created`
+a| [source,json] 
+----
+{
+  "id": "b0632224-bf79-471e-8f86-cd4ec5e30432",
+  "created_at": "2020-04-03T08:58:26Z"
+}
+----
+
+| `400 Bad Request`
+.3+a| [source,json]
+----
+{
+    "message": "error-message-is-here"
+}
+----
+| `500 Internal Server Error`
+| `501 Not Implemented`
+|===
+
+Kita akan mendefinisikan struktur yang akan menampung __request__ dan __response__ langsung di dalam
+handler.
+
+[source,go,linenums,highlight="21"]
+----
+func writeJSON(w http.ResponseWriter, status int, payload interface{}) { //<1>
+	w.WriteHeader(status)
+	w.Header().Add("content-type", "application/json")
+	json.NewEncoder(w).Encode(payload)
+}
+
+func (s *HTTPServer) NewArticleHandler(w http.ResponseWriter, r *http.Request) {
+	var payload struct { // <2>
+		Title   string `json:"title"`
+		Content string `json:"content"`
+	}
+	ctx := r.Context()
+
+	err := json.NewDecoder(r.Body).Decode(&payload)
+
+	if err != nil {
+		writeError(w, http.StatusBadRequest, ErrInvalidRequestPayload)
+		return
+	}
+
+	article, err := s.uc.CreateArticle(ctx, payload.Title, payload.Content) // <3>
+
+	if err != nil {
+		writeError(w, http.StatusUnprocessableEntity, err)
+	}
+
+	result := struct { // <4>
+		ID        string `json:"id"`
+		CreatedAt string `json:"created_at"`
+	}{article.ID.String(), article.CreatedAt.Format(time.RFC3339)}
+
+	writeJSON(w, http.StatusCreated, result)
+}
+----
+<1> Fungsi utilitas untuk menulis JSON sebagai respons. 
+<2> __Payload__ yang kita terima dari __request__.
+<3> Jalankan __behaviour__ dari Use Case.
+<4> Kembalikan hanya hasil yang berupa side effect.
