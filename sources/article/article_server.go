@@ -68,13 +68,20 @@ func (s *HTTPServer) Start() {
 
 // wrapError
 
-func writeError(w http.ResponseWriter, status int, err error) {
-	w.WriteHeader(status)
-	w.Header().Add("content-type", "application/json")
+func wrapError(err error) []byte {
 	wrapper := struct {
 		Message string `json:"message"`
 	}{Message: err.Error()}
-	json.NewEncoder(w).Encode(wrapper)
+
+	j, _ := json.Marshal(wrapper)
+
+	return j
+}
+
+func writeError(w http.ResponseWriter, status int, err error) {
+	w.WriteHeader(status)
+	w.Header().Add("content-type", "application/json")
+	w.Write(wrapError(err))
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload interface{}) {

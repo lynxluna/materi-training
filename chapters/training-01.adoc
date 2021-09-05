@@ -375,7 +375,53 @@ saja contohnya dalam variabel.
 ----
 
 Lalu kita tulis kode untuk pengujiannya yang isinya adalah semua __edge cases__ yang bisa
-menyebabkan __state__ nya tidak valid.
+menyebabkan __state__ nya tidak valid. Kasus-kasus ini bisa kita tulis dengan tabel seperti ini.
+
+[cols="1,1,1,1,"]
+.tabel pengujian
+|===
+| Nama Test | Judul | Konten | Hasil | Error 
+
+| `EmptyTitleContent`
+| (string kosong)
+| (string kosong)
+.6+| `NilArticle`
+| `ErrEmptyTitle`
+
+| `EmptyTitleOnly`
+| (string kosong)
+| (konten valid)
+| `ErrEmptyTitle`
+
+| `EmptyContent`
+| (judul valid)
+| (string kosong)
+| `ErrEmptyContent`
+
+| `ShortTitle`
+| (judul pendek)
+| (konten valid)
+| `ErrTitleTooShort`
+
+| `ShortContent`
+| (judul valid)
+| (konten pendek)
+| `ErrContentTooShort`
+
+| `TooLongTitle`
+| (judul terlalu panjang)
+| (konten valid)
+| `ErrTitleTooLong`
+
+| `ValidArticle`
+| (judul valid)
+| (konten valid)
+| `Article`
+| `nil`
+
+|===
+
+Masing-masing kasus di atas bisa diekspresikan dengan kode sebagai berikut ini.
 
 [source,go]
 .article_test.go 
@@ -383,7 +429,7 @@ menyebabkan __state__ nya tidak valid.
 
 func TestCreateArticle(t *testing.T) {
 	// article yang dianggap nil (karena bukan pointer)
-	var nilArticle Article
+	var nilArticle Article <1>
 	require.True(t, nilArticle.IsNil())
 
 	// id yang pasti dianggap valid
@@ -393,7 +439,7 @@ func TestCreateArticle(t *testing.T) {
 	require.NoError(t, err)
 
 	// tabel test
-	tests := []struct {
+	tests := []struct { <2>
 		// nama test
 		Name string
 		// input
@@ -413,7 +459,7 @@ func TestCreateArticle(t *testing.T) {
 	}
 
 	// Test dijalankan satu-satu dari tabel
-	for _, item := range tests {
+	for _, item := range tests { <3>
 		t.Run(item.Name, func(t *testing.T) {
 			article, err := createArticleWithID(id, item.Title, item.Content)
 			assert.Equal(t, item.Err, err)
@@ -429,6 +475,9 @@ func TestCreateArticle(t *testing.T) {
 	}
 }
 ----
+<1> Variabel yang berisi artikel kosong dan tidak valid karena ID nya juga 0.
+<2> Tabel Pengujian diekspresikan dengan __slice of structs__.
+<3> Menjalankan tabel pengujian.
 
 Jika kita jalankan pengujiannya, maka belum valid, jadi kita harus implementasikan validasinya. Dan
 tentunya, kita tulis juga kode uji untuk validasinya.

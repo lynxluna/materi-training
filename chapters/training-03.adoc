@@ -596,14 +596,24 @@ handler.
 
 [source,go,linenums,highlight="21"]
 ----
-func writeJSON(w http.ResponseWriter, status int, payload interface{}) { //<1>
+func wrapError(err error) []byte { // <1>
+	wrapper := struct {
+		Message string `json:"message"`
+	}{Message: err.Error()}
+
+	j, _ := json.Marshal(wrapper)
+
+	return j
+}
+
+func writeError(w http.ResponseWriter, status int, err error) { // <2>
 	w.WriteHeader(status)
 	w.Header().Add("content-type", "application/json")
-	json.NewEncoder(w).Encode(payload)
+	w.Write(wrapError(err))
 }
 
 func (s *HTTPServer) NewArticleHandler(w http.ResponseWriter, r *http.Request) {
-	var payload struct { // <2>
+	var payload struct { // <3>
 		Title   string `json:"title"`
 		Content string `json:"content"`
 	}
@@ -616,13 +626,13 @@ func (s *HTTPServer) NewArticleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	article, err := s.uc.CreateArticle(ctx, payload.Title, payload.Content) // <3>
+	article, err := s.uc.CreateArticle(ctx, payload.Title, payload.Content) // <4>
 
 	if err != nil {
 		writeError(w, http.StatusUnprocessableEntity, err)
 	}
 
-	result := struct { // <4>
+	result := struct { // <5>
 		ID        string `json:"id"`
 		CreatedAt string `json:"created_at"`
 	}{article.ID.String(), article.CreatedAt.Format(time.RFC3339)}
@@ -630,12 +640,85 @@ func (s *HTTPServer) NewArticleHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, result)
 }
 ----
-<1> Fungsi utilitas untuk menulis JSON sebagai respons. 
-<2> __Payload__ yang kita terima dari __request__.
-<3> Jalankan __behaviour__ dari Use Case.
-<4> Kembalikan hanya hasil yang berupa side effect.
+<1> Fungsi utilitas untuk membungkus `error` menjadi tipe JSON.
+<2> Fungsi utilitas untuk menulis JSON ke __response__.
+<3> __Payload__ yang kita terima dari __request__.
+<4> Jalankan __behaviour__ dari Use Case.
+<5> Kembalikan hanya hasil yang berupa side effect.
 
 ==== Menguji __Handler__
 
 Sebelum kita jalankan servernya, kita perlu membuat pengujian. Di dalam `net/http` dalam Go sudah
-ada __package__ `httptest` sehingga kita bisa menguji input dan output dari handler ini. 
+ada __package__ `httptest` sehingga kita bisa menguji input dan output dari handler ini.
+
+Pertama-tama kita definisikan terlebih dahulu tabel ujinya dan beberapa fungsi utilitas untuk
+menghasilkan nilai ekspektasinya.
+
+[source,go,linenums]
+----
+func mustMarshalJSON(v interface{}) []byte { // <1>
+	b, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+var ( // <2>
+	invalidReqPayloadErrJSON = wrapError(ErrInvalidRequestPayload)
+	emptyTitleErrJSON        = wrapError(ErrEmptyTitle)
+	titleTooShortErrJSON     = wrapError(ErrTitleTooShort)
+	contentTooShortErrJSON   = wrapError(ErrContentTooShort)
+	titleTooLongErrJSON      = wrapError(ErrTitleTooLong)
+)
+----
+<1> Fungsi utilitas untuk memudahkan menguji, akan `panic` jika tidak bisa dijadikan JSON.
+<2> Variabel untuk mencocokkan hasil keluaran yang berupa `error`.
+
+Kemudian kita definisikan tabel pengujiannya.
+
+[source,go,linenums]
+----
+func TestCreateArticleHandler(t *testing.T) {
+	type testPayload struct { <1>
+		Title   string `json:"title"`
+		Content string `json:"content"`
+	}
+
+	validPayload := testPayload{validTitle, validContent} <2>
+	validPayloadJSON := mustMarshalJSON(validPayload)
+	validArticle, _ := CreateArticle(validTitle, validContent)
+	validArticleJSON := mustMarshalJSON(validArticle)
+
+	tests := []struct { <3>
+		name    string
+		reqJSON []byte
+
+		status int
+		ret    []byte
+	}{
+		{"NilRequest", nil,
+			http.StatusBadRequest, invalidReqPayloadErrJSON},
+		{"BlankRequest", []byte(""),
+			http.StatusBadRequest, invalidReqPayloadErrJSON},
+		{"BlankJSONRequest", []byte("{}"),
+			http.StatusUnprocessableEntity, emptyTitleErrJSON},
+		{"WithoutMatchingKeys", []byte(`{"red":"yes"}`),
+			http.StatusUnprocessableEntity, emptyTitleErrJSON},
+		{"NilTitleAndContent", []byte(`{"title":nil,"content":nil}`),
+			http.StatusUnprocessableEntity, emptyTitleErrJSON},
+		{"ShortTitle", mustMarshalJSON(testPayload{"short", validContent}),
+			http.StatusUnprocessableEntity, titleTooShortErrJSON},
+		{"ShortContent", mustMarshalJSON(testPayload{validTitle, "short"}),
+			http.StatusUnprocessableEntity, contentTooShortErrJSON},
+		{"LongTitle", mustMarshalJSON(testPayload{longTitle, validContent}),
+			http.StatusUnprocessableEntity, titleTooLongErrJSON},
+		{"ValidArticle", validPayloadJSON,
+			http.StatusCreated, validArticleJSON},
+	}	
+  // ... cuplikan kode selanjutnya setelah ini
+}
+----
+<1> Struktur sementara untuk mengekspresikan __payload__ yang akan dikirimkan ke server.
+<2> Beberapa variabel utilitas yang berisi __payload__ yang valid dan artikel yang valid.
+<3> Tabel pengujian.
