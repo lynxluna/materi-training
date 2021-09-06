@@ -1,30 +1,17 @@
-== Lapisan Aplikasi, UseCase, dan Infrastruktur
+== Deployment
 
+> The key in such a transition to continuous delivery is to expect things to get worse before you’ll
+> be able to make them better - Matthias Marschall
 
-== Analisa Entitas dan Lifecycle
+Untuk men __deploy__ ke server, paling tidak kita mengerti struktur direktori dan perintah dasar linux.
+Di modul ini, yang akan kita pakai adalah Linux yang berbasis debian. Untuk studi kasus ini kita
+akan memakai hosting https://idcloudhost.com[IDCloudHost] karena menurut saya hosting ini menawarkan
+VPS termurah.
 
-> To communicate effectively, the code must be based on the same language used to write the
-> requirements—the same language that the developers speak with each other and with domain experts.
-> - Eric Evans
+[WARNING]
+====
+Bukan iklan, ini benar-benar dari pengalaman pribadi.
+====
 
-=== Pendaftaran, Otentifikasi dan Otorisasi 
+==== Menyiapkan lingkungan untuk __deploy__
 
-=== Tentang Object Lifecycle 
-
-=== Simple Object Lifecycle
-
-=== Rich Object Lifecycle
-
-=== Membuat State Diagram
-
-=== Mengidentifikasi Side Effects
-
-==== Mengimplementasi Side Effects di Application Layer 
-
-==== Mengimplementasi Side Effects di Infrastructure Layer
-
-===== DB Trigger 
-
-===== Pub-Sub
-
-=== Latihan

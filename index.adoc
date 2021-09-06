@@ -26,4 +26,3 @@ include::chapters/training-04.adoc[]
 
 include::chapters/training-05.adoc[]
 
-include::chapters/training-06.adoc[]

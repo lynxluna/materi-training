@@ -492,7 +492,7 @@ func validateTitle(title string) error {
   
   runeCount := utf8.RuneCountInString(title)
 
-  if runeCount == 0 {
+  if runeCount == 0 { 
     return ErrEmptyTitle 
   }
 

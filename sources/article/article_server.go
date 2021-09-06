@@ -79,14 +79,14 @@ func wrapError(err error) []byte {
 }
 
 func writeError(w http.ResponseWriter, status int, err error) {
-	w.WriteHeader(status)
 	w.Header().Add("content-type", "application/json")
+	w.WriteHeader(status)
 	w.Write(wrapError(err))
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload interface{}) {
-	w.WriteHeader(status)
 	w.Header().Add("content-type", "application/json")
+	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(payload)
 }
 
@@ -112,6 +112,7 @@ func (s *HTTPServer) NewArticleHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		writeError(w, http.StatusUnprocessableEntity, err)
+		return
 	}
 
 	result := struct {

@@ -545,7 +545,7 @@ Dan jika kita jalankan dengan `curl` ke __path__ `/articles` hasilnya kurang leb
 <1> HTTP Status
 <2> Galat yang sudah dibungkus dan menghasilkan JSON
 
-==== Mengimplementasikan __Handler__
+==== Mengimplementasikan dan menguji HTTP __Handler__
 
 [WARNING]
 ====
@@ -630,6 +630,7 @@ func (s *HTTPServer) NewArticleHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		writeError(w, http.StatusUnprocessableEntity, err)
+		return
 	}
 
 	result := struct { // <5>
@@ -722,3 +723,158 @@ func TestCreateArticleHandler(t *testing.T) {
 <1> Struktur sementara untuk mengekspresikan __payload__ yang akan dikirimkan ke server.
 <2> Beberapa variabel utilitas yang berisi __payload__ yang valid dan artikel yang valid.
 <3> Tabel pengujian.
+
+Lalu kita jalankan satu-satu pengujiannya dengan menggunakan __package__ `httptest`. __Package__
+`httptest` mensimulasikan __request__ dan __response__ HTTP yang akan ditangani oleh handler
+tertentu. Langkah-langkah pengujiannya terlihat dalam kode sebagai berikut:
+
+[source,go,linenums]
+----
+
+	s, err := NewHTTPServer() // <1> 
+	require.NoError(t, err)
+
+
+	for _, item := range tests {
+		t.Run(item.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/articles", 
+				bytes.NewReader(item.reqJSON)) // <2>
+			req.Header.Set("content-type", "application/json")
+			rr := httptest.NewRecorder()
+
+			s.NewArticleHandler(rr, req) // <3>
+
+			res := rr.Result()
+			defer res.Body.Close()
+
+			assert.Equal(t, item.status, res.StatusCode) // <4>
+
+			var buf bytes.Buffer
+			n, err := buf.ReadFrom(res.Body)
+			require.NoError(t, err)
+			assert.NotZero(t, n)
+
+			isErrorCode := res.StatusCode/100 > 3 // <5>
+
+			if isErrorCode {
+				assert.JSONEq(t, string(item.ret), buf.String())
+				return
+			}
+      
+      var ret struct {
+				ID        string `json:"id"`
+				CreatedAt string `json:"created_at"`
+			}
+
+			err = json.NewDecoder(&buf).Decode(&ret)
+
+			if !assert.NoError(t, err) {
+				return
+			}
+
+			_, err = uuid.Parse(ret.ID) // <6>
+			assert.NoError(t, err)
+			d, err := time.Parse(time.RFC3339, ret.CreatedAt)
+			assert.NoError(t, err)
+			assert.GreaterOrEqual(t, 4*time.Minute, time.Now().Sub(d)) // <7>
+		})
+	}
+----
+<1> Pembuatan objek `HTTPServer` yang akan diuji.
+<2> Persiapan `httptest` dengan membuat `request` dan `recorder`.
+<3> Eksekusi handler dengan `recorder` sebagai implementasi `http.ResponseWriter`.
+<4> Uji dan bandingkan status dan kembaliannya.
+<5> Uji untuk status dengan galat (4xx 5xx)
+<6> Cek apakah ID nya valid atau tidak.
+<7> Cek kalau artikelnya dibuat tidak lebih dari 5 menit yang lalu.
+
+
+Setelah kita tulis, kita jalankan kode pengujiannya
+
+[source]
+----
+> go test -run -v TestCreateArticleHandler .
+
+=== RUN   TestCreateArticleHandler
+=== RUN   TestCreateArticleHandler/NilRequest
+=== RUN   TestCreateArticleHandler/BlankRequest
+=== RUN   TestCreateArticleHandler/BlankJSONRequest
+=== RUN   TestCreateArticleHandler/WithoutMatchingKeys
+=== RUN   TestCreateArticleHandler/NilTitleAndContent
+=== RUN   TestCreateArticleHandler/ShortTitle
+=== RUN   TestCreateArticleHandler/ShortContent
+=== RUN   TestCreateArticleHandler/LongTitle
+=== RUN   TestCreateArticleHandler/ValidArticle
+--- PASS: TestCreateArticleHandler (0.00s)
+    --- PASS: TestCreateArticleHandler/NilRequest (0.00s)
+    --- PASS: TestCreateArticleHandler/BlankRequest (0.00s)
+    --- PASS: TestCreateArticleHandler/BlankJSONRequest (0.00s)
+    --- PASS: TestCreateArticleHandler/WithoutMatchingKeys (0.00s)
+    --- PASS: TestCreateArticleHandler/NilTitleAndContent (0.00s)
+    --- PASS: TestCreateArticleHandler/ShortTitle (0.00s)
+    --- PASS: TestCreateArticleHandler/ShortContent (0.00s)
+    --- PASS: TestCreateArticleHandler/LongTitle (0.00s)
+    --- PASS: TestCreateArticleHandler/ValidArticle (0.00s)
+PASS
+ok      course/article  0.106s
+----
+
+Yang kita lakukan sampai saat ini masih berupa __unit test__, yaitu pengetesan untuk satu unit saja.
+Dalam hal ini unit yang saya maksud adalah sebuah fungsi. Uji selanjutnya adalah uji end-to-end.
+Untuk ini kita bisa melakukan uji manual dengang menggunakan `curl`.
+
+Pertama, kita jalankan dulu server kita seperti kemarin.
+
+[source]
+----
+> go run .
+----
+
+Lalu kita coba membuat satu artikel dengan menggunakan perintah post
+
+[source]
+----
+> curl --request POST -v \
+  --url http://localhost:8000/articles \
+  --header 'Content-Type: application/json' \
+  --data '{
+	"title":"pada hari minggu",
+	"content":"pada hari minggu ku turut ayah ke kota, naik delman istimewa ku duduk di muka, 
+  ku duduk di samping pak kusir yang sedang bekerja, mengendarai kuda supaya baik jalannya. 
+  tuk tik tak tik tuk tik tak tik tuk tik tak tik tuk, tuk tik tak tik tuk tik tak, suara sepatu kuda"
+}' <1>
+
+*   Trying 127.0.0.1:8000... 
+* Connected to localhost (127.0.0.1) port 8000 (#0)
+> POST /articles HTTP/1.1 <2>
+> Host: localhost:8000
+> User-Agent: curl/7.78.0
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 312
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 201 Created <3>
+< Content-Type: application/json
+< Date: Mon, 06 Sep 2021 04:06:37 GMT
+< Content-Length: 87
+<
+{"id":"792d6e31-cbd6-41ee-aca5-646748ebab9e","created_at":"2021-09-06T11:06:37+07:00"} <4>
+* Connection #0 to host localhost left intact
+----
+<1> Cara membuat request JSON dengan `curl`.
+<2> Operasi `POST` terlihat karena memakai opsi `-v` yang artinya __verbose__ (dilihatkan semuanya).
+<3> Statusnya
+<4> __Response Body__ hasil operasi pembuatan artikel.
+
+=== Latihan
+
+. Implementasikan use case dan API __endpoint__ untuk 3 kasus yang lain dari __user story__ di
+atas, lengkap dengan kode pengujinya dan perintah `curl` nya.
+
+[TIP]
+.Petunjuk pengerjaan
+====
+. Untuk membaca, metode yang digunakan adalah `GET`. Dalam `chi` ada metode `Get`.
+. Jangan lupa baca dokumentasi di https://pkg.go.dev/github.com/go-chi/chi
+====

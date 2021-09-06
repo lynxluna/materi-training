@@ -1,18 +1,120 @@
-== Deployment
+== Konfigurasi
 
-> The key in such a transition to continuous delivery is to expect things to get worse before you’ll
-> be able to make them better - Matthias Marschall
+> I'm not a great programmer; I'm just a good programmer with great habits. -- Kent Beck
 
-=== Trunk Based Development 
+Sebuah perangkat lunak harus bisa dikonfigurasi. Di implementasi `HTTPServer` tadi kita memakai
+__functional options__ untuk mengkonfigurasi. Misalnya, untuk mengganti port. Jadi di `main`
+kita bisa memakai seperti ini:
 
-=== Tentang Deployment dan CI/CD
+[source,go]
+----
+func main() {
+  
+  changeHostPort := func( s *HTTPServer ) error { 
+    s.host = "0.0.0.0" // <1>
+    s.port = 9000 
+  }
 
-=== Alat-alat yang digunakan untuk pembuatan Pipeline 
+  server := NewHTTPServer(changeHostPort)
+}
+----
+<1> Mengganti host ke `0.0.0.0` yang artinya mendengarkan ke semua antarmuka jaringan.
 
-=== 12 Factor Applications
+=== Aplikasi 12 Faktor
 
-=== Feature Flags & Canary
+https://12factor.net[Aplikasi 12 faktor] adalah metodologi untuk membuat aplikasi yang bisa
+di-__deploy__ ke komputasi awan. Secara singkat, aplikasi 12 faktor menekankan pada:
 
-=== Contoh Pembuatan CI/CD Pipeline
+. Kemungkinan untuk deploy berkali-kali. 
+. Memisahkan __Build__ dan __Run__.
+. Menjadikan artifak yang dipakai dalam pengembangan, staging, dan produksi sama.
 
-=== Latihan
+Ada beberapa cara untuk melakukan ini. Yang paling umum adalah menggunakan __environment
+variables__. 
+
+[NOTE]
+====
+
+__Environment variables__ adalah pasangan kunci dan nilai (__key value pair__) yang dimuat oleh
+sistem operasi ketika memulai proses. Dalam sistem operasi seperti Unix dan Linux __environment
+variables__ bisa diakses dengan menggunakan perintah `env`.
+
+====
+
+=== Mengimplementasi konfigurasi dengan __environment variables__.
+
+Kita coba mengakses __environment variables__ dengan kode eksperimen seperti di bawah ini.
+
+[source,go,linenums]
+----
+include::{sourcedir}/load_env.go[]
+----
+<1> Membaca dari __environment variabel__ dan mengecek ada atau tidak
+
+Kita jalankan tanpa tambahan apapun:
+
+[source]
+----
+> go run load_env.go
+
+Tidak ada ARTICLE_HOST
+----
+
+Kalau kita set dengan `export` di Bash atau `set` di Windows, atau langsung ketika menjalankan
+binarynya.
+
+[cols="1,5"]
+|===
+| Shell | Perintah 
+
+|Inline
+a|[source]
+----
+> ARTICLE_HOST=172.98.33.122 go run load_env.go
+
+Host :  172.98.33.122
+----
+
+
+| Bash
+a|[source,bash]
+----
+> export ARTICLE_HOST=172.98.33.122
+
+> go run load_env.go
+
+Host :  172.98.33.122
+----
+| Fish 
+a|[source,fish]
+----
+> set -Ux ARTICLE_HOST 172.98.33.122
+
+> go run load_env.go
+
+Host :  172.98.33.122
+----
+
+| Windows CMD
+a|[source,cmd]
+----
+> SET ARTICLE_HOST=172.98.33.122
+
+> go run load_env.go
+
+Host :  172.98.33.122
+----
+
+| Windows Powershell
+a|[source,powershell]
+----
+> $Env:ARTICLE_HOST = "172.98.33.122"
+
+> go run load_env.go
+
+Host :  172.98.33.122
+
+----
+
+|===
+
