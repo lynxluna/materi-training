@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	_ "github.com/lib/pq"
 
@@ -23,7 +24,9 @@ const (
 )
 
 func TestSQLStorePostgres(t *testing.T) {
-
+	if testing.Short() {
+		t.Skip() // <1>
+	}
 	ctx := context.Background()
 
 	db, err := sql.Open("postgres", pgConnStr)
@@ -39,13 +42,16 @@ func TestSQLStorePostgres(t *testing.T) {
 	store, err := CreateSQLWithDB(db, squirrel.Dollar)
 	require.NoError(t, err)
 
-	err = store.SaveArticle(ctx, article)
+	err = store.SaveArticle(ctx, article) // <2>
 
 	if assert.NoError(t, err) {
-		a, err := store.FindArticleByID(ctx, article.ID)
+		a, err := store.FindArticleByID(ctx, article.ID) // <3>
 
 		if assert.NoError(t, err) {
-			assert.Equal(t, article, a)
+			assert.Equal(t, article.ID, a.ID)
+			assert.Equal(t, article.Title, a.Title)
+			assert.Equal(t, article.Content, a.Content)
+			assert.GreaterOrEqual(t, 1*time.Minute, article.CreatedAt.Sub(a.CreatedAt))
 		}
 	}
 }

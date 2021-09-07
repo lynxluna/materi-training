@@ -61,10 +61,12 @@ func (s *SQLStore) FindArticleByID(ctx context.Context, id uuid.UUID) (Article, 
 	var article Article
 	var err error
 
-	idPredicate := sq.Eq{"id": article.ID}
+	idPredicate := sq.Eq{"id": id.String()}
 
 	err = sq.
-		Select("id", "title", "content", "created_at").Where(idPredicate).
+		Select("id", "title", "content", "created_at").
+		From("articles").
+		Where(idPredicate).
 		RunWith(s.db).PlaceholderFormat(s.ph).
 		ScanContext(ctx,
 			&article.ID,
