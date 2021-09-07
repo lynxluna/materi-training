@@ -316,3 +316,8 @@ func (s *SQLStore) FindArticleByID(ctx context.Context, id uuid.UUID) (Article, 
 <1> Predikat untuk mengisi klausa `WHERE`.
 <2> Ambil satu record dan simpen ke `article`.
 <3> Jika tidak menemukan, kembalikan `ErrArticleNotFound`.
+
+Kemudian kita harus menuliskan pengujian. Kode uji ini berbeda dengan kode uji sebelumnya karena ini
+melibatkan infrastruktur.
+
+

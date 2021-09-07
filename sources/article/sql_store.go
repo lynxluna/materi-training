@@ -14,6 +14,10 @@ type SQLStore struct {
 	ph sq.PlaceholderFormat
 }
 
+func CreateSQLWithDB(db *sql.DB, ph sq.PlaceholderFormat) (*SQLStore, error) {
+	return &SQLStore{db: db, ph: ph}, nil
+}
+
 func CreateSQLStore(driver, connString string, ph sq.PlaceholderFormat) (*SQLStore, error) {
 	db, err := sql.Open(driver, connString)
 
@@ -21,10 +25,7 @@ func CreateSQLStore(driver, connString string, ph sq.PlaceholderFormat) (*SQLSto
 		return nil, err
 	}
 
-	return &SQLStore{
-		db: db,
-		ph: ph,
-	}, nil
+	return CreateSQLWithDB(db, ph)
 }
 
 func (s *SQLStore) SaveArticle(ctx context.Context, article Article) error {
