@@ -208,7 +208,9 @@ func (s *SQLStore) FindArticleByID(ctx context.Context, id uuid.UUID) (Article, 
 }
 ----
 
-Kita buat konstruktor buat `SQLStore` dengan mengisi `db`:
+Kita buat konstruktor buat `SQLStore` dengan mengisi `db` dan __placeholder format__. Placeholder
+untuk tiap SQL Store berbeda. PostgreSQL memakai tanda dollar `$`, sementara SQLite, misalnya pakai
+tanda tanya `?`.
 
 [source,go]
 .sql_store.go
@@ -237,8 +239,13 @@ func CreateSQLStore(driver, connString string, ph sq.PlaceholderFormat) (*SQLSto
 <1> Objek basis data.
 <2> Konstruktor dari objek sql store.
 
-Kemudian kita implementasikan metode `SaveArticle`:
+Kemudian kita implementasikan metode `SaveArticle` dan `FindArticleByID` yang paling banyak kita
+pakai di handler.
 
+Implementasi `SaveArticle` memakai klausa `INSERT`. `ID` ditandai sebagai `PRIMARY KEY` yang berarti
+tidak boleh ada dua `ID` yang sama. Ketika `INSERT` gagal, maka kita akan mencoba membarui yang
+sudah ada.
+ 
 [source,go,linenums]
 ----
 func (s *SQLStore) SaveArticle(ctx context.Context, article Article) error {
