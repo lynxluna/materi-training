@@ -280,5 +280,39 @@ func (s *SQLStore) SaveArticle(ctx context.Context, article Article) error {
 <1> Petakan __field__ di basis data dengan nama di struktur 
 <2> Kita coba `INSERT` terlebih dahulu.
 <3> Jika tidak ada galat, maka keluar 
-<4> Predicate untuk mengisi klausa `WHERE`.
+<4> Predikat untuk mengisi klausa `WHERE`.
 <5> Jika tidak bisa di- `INSERT` kita lakukan `UPDATE` karena artinya sudah ada. 
+
+Sementara untuk `FindArticleByID` mudah sekali kita implementasikan dengan menggunakan klausa
+`SELECT` dan predikat (klausa `WHERE`).
+
+[source,go,linenums]
+----
+func (s *SQLStore) FindArticleByID(ctx context.Context, id uuid.UUID) (Article, error) {
+	var article Article
+	var err error
+
+	idPredicate := sq.Eq{"id": article.ID} // <1>
+
+	err = sq.
+		Select("id", "title", "content", "created_at").Where(idPredicate).
+		RunWith(s.db).PlaceholderFormat(s.ph).
+		ScanContext(ctx,
+			&article.ID,
+			&article.Title,
+			&article.Content,
+			&article.CreatedAt) // <2>
+
+	if err != nil {
+		if err == sql.ErrNoRows { // <3>
+			return Article{}, ErrArticleNotFound
+		}
+		return Article{}, err
+	}
+
+	return article, nil
+}
+----
+<1> Predikat untuk mengisi klausa `WHERE`.
+<2> Ambil satu record dan simpen ke `article`.
+<3> Jika tidak menemukan, kembalikan `ErrArticleNotFound`.
