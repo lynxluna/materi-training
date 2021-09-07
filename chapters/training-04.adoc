@@ -1,4 +1,4 @@
-== Konfigurasi
+== Konfigurasi dan __Deployment__
 
 > I'm not a great programmer; I'm just a good programmer with great habits. -- Kent Beck
 
@@ -113,8 +113,667 @@ a|[source,powershell]
 > go run load_env.go
 
 Host :  172.98.33.122
-
 ----
 
 |===
 
+Untuk mendesain environment variable, kita bisa mengidentifikasi. Yang jelas pertama yaitu host dan
+port. Kita tambahkan prefiks untuk memisahkan dengan variabel yang lain.
+
+[cols="1,1,2"]
+|===
+| Variabel | Contoh | Keterangan
+
+| `ARTICLE_HOST` | `127.0.0.1`, `0.0.0.0` | Alamat di mana server mendegarkan pesan yang masuk 
+| `ARTICLE_PORT` | `9000` | Port di mana server mendengarkan pesan yang masuk
+|===
+
+Jadi kita buat fungsi untuk mengkonfigurasi servernya.
+
+[source,go,linenums]
+----
+func configureHost(s *HTTPServer) error { // <1>
+	hostStr, ok := os.LookupEnv("ARTICLE_HOST")
+	if !ok {
+		return nil
+	}
+
+	if ip := net.ParseIP(hostStr); ip == nil {
+		return nil
+	}
+
+	s.host = hostStr
+	return nil
+}
+
+func configurePort(s *HTTPServer) error { // <2>
+	portStr, ok := os.LookupEnv("ARTICLE_PORT")
+	if !ok {
+		return nil
+	}
+
+	port, err := strconv.ParseUint(portStr, 10, 16)
+
+	if err != nil {
+		return err
+	}
+
+	s.port = uint16(port)
+	return nil
+}
+----
+<1> Fungsi untuk mengubah host ip
+<2> Fungsi untuk mengubah port
+
+Kita uji jika kita masukkan __enviroment variables__ ketika menjalankan `go run`.
+
+[source]
+----
+> ARTICLE_PORT=9999 ARTICLE_HOST=0.0.0.0 go run .
+
+2021/09/06 19:56:34 Server dijalankan di 0.0.0.0 port 9999 ...
+----
+
+=== Deployment
+
+Untuk men __deploy__ ke server, paling tidak kita mengerti struktur direktori dan perintah dasar linux.
+Di modul ini, yang akan kita pakai adalah Linux yang berbasis debian. Untuk studi kasus ini kita
+akan memakai hosting https://idcloudhost.com[IDCloudHost] karena menurut saya hosting ini menawarkan
+VPS termurah.
+
+[WARNING]
+====
+Bukan iklan, ini benar-benar dari pengalaman pribadi.
+====
+
+==== Menyiapkan lingkungan untuk __deploy__
+
+Yang diperlukan untuk keperluan __deployment__ ini ada 3 perangkat lunak.
+
+1. https://virtualbox.org[VirtualBox, window=_blank] untuk menjalankan mesin virtual.  
+2. https://www.vagrantup.com/downloads[Vagrant, window=_blank] untuk memudahkan manajemn mesin virtual.
+3. https://www.docker.com/products/docker-desktop[Docker Desktop, window=_blank] untuk membangun dan
+men-__deploy__ menggunakan Docker.
+
+
+===== Menyiapkan mesin virtual dengan vagrant
+
+Kita akan menggunakan Ubuntu 20.04 LTS (Focal Fossa). Jadi kita jalankan vagrant box untuk mengambil
+citra Ubuntu ke virtualbox.
+
+[source]
+----
+> vagrant box add bento/ubuntu-20.04
+
+==> box: Loading metadata for box 'bento/ubuntu-20.04'
+    box: URL: https://vagrantcloud.com/bento/ubuntu-20.04
+==> box: Adding box 'bento/ubuntu-20.04' (v20210831.0.0) for provider: virtualbox
+    box: Downloading: https://vagrantcloud.com/ubuntu/boxes/focal64/versions/20210831.0.0/providers/virtualbox.box
+Download redirected to host: cloud-images.ubuntu.com
+==> box: Successfully added box 'bento/ubuntu-20.04' (v20210831.0.0) for 'virtualbox'!
+----
+
+Selanjutnya, kita buat berkas `Vagrantfile` di direktori kita, dan mulai mesin virtualnya.
+
+[source]
+----
+> vagrant init bento/ubuntu-20.04 <1>
+
+A `Vagrantfile` has been placed in this directory. You are now
+ready to `vagrant up` your first virtual environment! Please read
+the comments in the Vagrantfile as well as documentation on
+`vagrantup.com` for more information on using Vagrant.
+
+> vagrant up <2>
+Bringing machine 'default' up with 'virtualbox' provider...
+==> default: Importing base box 'bento/ubuntu-20.04'...
+==> default: Matching MAC address for NAT networking...
+==> default: Checking if box 'bento/ubuntu-20.04' version '202107.28.0' is up to date...
+==> default: Setting the name of the VM: machine_default_1630941509512_20986
+==> default: Clearing any previously set network interfaces...
+==> default: Preparing network interfaces based on configuration...
+    default: Adapter 1: nat
+==> default: Forwarding ports...
+    default: 22 (guest) => 2222 (host) (adapter 1)
+==> default: Booting VM...
+==> default: Waiting for machine to boot. This may take a few minutes...
+    default: SSH address: 127.0.0.1:2222
+    default: SSH username: vagrant
+    default: SSH auth method: private key
+    default:
+    default: Vagrant insecure key detected. Vagrant will automatically replace
+    default: this with a newly generated keypair for better security.
+    default:
+    default: Inserting generated public key within guest...
+    default: Removing insecure key from the guest if it's present...
+    default: Key inserted! Disconnecting and reconnecting using new SSH key...
+==> default: Machine booted and ready!
+==> default: Checking for guest additions in VM...
+==> default: Mounting shared folders...
+    default: /vagrant => /Users/lynxluna/Projects/ididit/materi_training
+----
+<1> Inisialisasi berkas `Vagrantfile`
+<2> Mulai mesin virtual
+
+Kita bisa mulai masuk ke dalam mesin virtualnya dengan menggunakan perintah `vagrant ssh`.
+
+[source]
+----
+> vagrant ssh <1>
+
+Welcome to Ubuntu 20.04.2 LTS (GNU/Linux 5.4.0-80-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+  System information as of Mon 06 Sep 2021 03:18:54 PM UTC
+
+  System load:  0.51              Processes:             120
+  Usage of /:   2.3% of 61.31GB   Users logged in:       0
+  Memory usage: 15%               IPv4 address for eth0: 10.0.2.15
+  Swap usage:   0%
+
+
+This system is built by the Bento project by Chef Software
+More information can be found at https://github.com/chef/bento
+
+vagrant@vagrant:~$ <2>
+----
+<1> Perintah untuk masuk ke mesin virtual dengan menggunakan `ssh`.
+<2> __Prompt__ di mana kita bisa mulai menjalankan beberapa baris perintah.
+
+Berarti mesin virtual vagrant sudah jalan dan kita bisa keluar dan matikan. Kita akan memakai mesin virtualnya nanti.
+
+[source]
+----
+vagrant@vagrant:~$ exit
+
+> vagrant halt
+==> default: Attempting graceful shutdown of VM...
+----
+
+===== Menyiapkan docker desktop
+
+Untuk docker desktop, caranya sangat mudah. Cukup dengan memasang, kemudian masuk ke terminal dan
+coba jalankan perintah docker pull dan docker run. Kita akan coba dengan mengambil citra `busybox`
+dan `golang:alpine`.
+
+[source]
+----
+> docker pull golang:alpine
+alpine: Pulling from library/golang
+Digest: sha256:c03a922dfb0d6d3a94d46cc5be69002011763595ac2786068fde63ee174d797b
+Status: Image is up to date for golang:alpine
+docker.io/library/golang:alpine
+
+> docker pull busybox
+Using default tag: latest
+latest: Pulling from library/busybox
+8ec32b265e94: Pull complete
+Digest: sha256:b37dd066f59a4961024cf4bed74cae5e68ac26b48807292bd12198afa3ecb778
+Status: Downloaded newer image for busybox:latest
+docker.io/library/busybox:latest
+----
+
+Lalu kita coba jalankan sesi interaktif dengan dua image tersebut.
+
+[source]
+----
+> docker run -it golang:alpine <1>
+
+> /go # ls -al
+total 16
+drwxrwxrwx    4 root     root          4096 Aug 30 21:46 .
+drwxr-xr-x    1 root     root          4096 Sep  6 15:59 ..
+drwxrwxrwx    2 root     root          4096 Aug 30 21:46 bin
+drwxrwxrwx    2 root     root          4096 Aug 30 21:46 src
+/go #
+
+> docker run -it busybox <2>
+
+> / # ls -al
+total 44
+drwxr-xr-x    1 root     root          4096 Sep  6 16:00 .
+drwxr-xr-x    1 root     root          4096 Sep  6 16:00 ..
+-rwxr-xr-x    1 root     root             0 Sep  6 16:00 .dockerenv
+drwxr-xr-x    2 root     root         12288 Aug 20 16:21 bin
+drwxr-xr-x    5 root     root           360 Sep  6 16:00 dev
+drwxr-xr-x    1 root     root          4096 Sep  6 16:00 etc
+drwxr-xr-x    2 nobody   nobody        4096 Aug 20 16:21 home
+dr-xr-xr-x  246 root     root             0 Sep  6 16:00 proc
+drwx------    1 root     root          4096 Sep  6 16:00 root
+dr-xr-xr-x   13 root     root             0 Sep  6 16:00 sys
+drwxrwxrwt    2 root     root          4096 Aug 20 16:21 tmp
+drwxr-xr-x    3 root     root          4096 Aug 20 16:21 usr
+drwxr-xr-x    4 root     root          4096 Aug 20 16:21 var
+/ #
+----
+<1> Menjalankan kontainer `golang:alpine`
+<2> Menjalankan kontainer `busybox`
+
+==== Membangun executable binary 
+
+Untuk membuat __executable binary__ untuk dijalankan di server, kita pakai `go build` dengan
+bebearpa parameter tambahan.
+
+- `-o` Untuk menentukan nama berkas hasil kompilasi.
+- `-ldflags` Untuk menambahkan opsi dalam proses __linking__ seperti menghilangkan simbol untuk
+  debug supaya ukuran berkasnya lebih kecil.
+
+Untuk membangun untuk platform yang sama di mana kita mengembangkan programnya, kita pakai perintah
+sebagai berikut. `-w -s` untuk parameter `-ldflags` gunanya untuk menghilangkan simbol.
+
+[source]
+----
+> go build -o article -ldflags '-w -s' 
+----
+
+Kita bisa cek hasilnya dan kita jalankan
+
+[source]
+----
+> file article
+
+article: Mach-O 64-bit x86_64 executable
+
+> ./article
+2021/09/06 23:08:02 Server dijalankan di 127.0.0.1 port 8000 ...
+----
+Artinya berkas __executable__ `article` merupakan berkas dengan format Mach-O, yang merupakan format
+untuk macOS. 
+
+===== Cross Compilation
+
+__Cross Compilation__ artinya membangun biner untuk target sistem operasi atau prosesor yang berbeda
+dari platform yang dipakai untuk membangun. Di Go, kita bisa membangun berkas biner untuk platform
+lain dengan menggunakan __environment variables__ `GOOS` dan `GOARCH`.
+
+- `GOOS` menunjukkan sistem operasi target. Variabel ini bisa diisi dengan `linux`, `windows`, atau
+  `darwin`.
+- `GOARCH` menunjukkan prosesor target. Variabl ini bisa diisi dengan `i386`, `amd64`, atau `arm`
+  atau prosesor lain yang didukung oleh go.
+
+Platform yang saya pakai saat ini adalah macOS, untuk membuat berkas __executable__ untuk linux atau
+windows, kita bisa jalankan perintah sbb:
+
+[source]
+----
+> GOOS=linux GOARCH=amd64 go build -o article-linux -ldflags '-w -s'
+> GOOS=windows GOARCH=amd64 go build -o article.exe -ldflags '-w -s'
+> file article-linux
+
+article-linux: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, Go
+BuildID=UyBfVtdsjJ3G3hKvjS-O/1MmhsLOHwTmV0OwpbIna/szUYx91P5tX4HU2RrScw/kpHA3ik3ddy5EmvkaSGc,
+stripped 
+
+> file article.exe
+
+article.exe: PE32+ executable (console) x86-64 (stripped to external PDB), for MS Windows
+----
+
+===== Menjalankan di Mesin Virtual
+
+Binary tersebut bisa langsung dijalankan di mesin vagrant. Saat menjalankan vagrant, sebenarnya
+vagrant akan me-__mount__ direktori tempat `Vagrantfile` berada di `/vagrant`. Kita bisa masuk ke
+direktori tersebut dan menjalankan berkas yang sudah di-__cross compile__ tadi.
+
+[source]
+----
+
+> vagrant up
+
+Bringing machine 'default' up with 'virtualbox' provider...
+==> default: Checking if box 'bento/ubuntu-20.04' version '202107.28.0' is up to date...
+==> default: Clearing any previously set forwarded ports...
+==> default: Clearing any previously set network interfaces...
+==> default: Preparing network interfaces based on configuration...
+    default: Adapter 1: nat
+==> default: Forwarding ports...
+    default: 22 (guest) => 2222 (host) (adapter 1)
+==> default: Booting VM...
+==> default: Waiting for machine to boot. This may take a few minutes...
+    default: SSH address: 127.0.0.1:2222
+    default: SSH username: vagrant
+    default: SSH auth method: private key
+==> default: Machine booted and ready!
+==> default: Checking for guest additions in VM...
+==> default: Mounting shared folders...
+    default: /vagrant => /Users/lynxluna/Projects/ididit/materi_training
+==> default: Machine already provisioned. Run `vagrant provision` or use the `--provision`
+==> default: flag to force provisioning. Provisioners marked to run always will still run.
+
+> vagrant ssh 
+
+Welcome to Ubuntu 20.04.2 LTS (GNU/Linux 5.4.0-80-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+  System information as of Mon 06 Sep 2021 04:37:21 PM UTC
+
+  System load:  0.0               Processes:             114
+  Usage of /:   2.3% of 61.31GB   Users logged in:       0
+  Memory usage: 14%               IPv4 address for eth0: 10.0.2.15
+  Swap usage:   0%
+
+
+This system is built by the Bento project by Chef Software
+More information can be found at https://github.com/chef/bento
+Last login: Mon Sep  6 16:33:44 2021 from 10.0.2.2
+
+> vagrant@vagrant:~$ cd /vagrant/sources/article/
+> vagrant@vagrant:/vagrant/sources/article$ ./article-linux
+
+2021/09/06 16:38:29 Server dijalankan di 127.0.0.1 port 8000 ...
+----
+
+Masalahnya adalah, kita tidak bisa menguji apakah benar-benar jalan, karena dia hanya mendengarkan
+di alamat `127.0.0.1` saja yang merupakan __default__.  Supaya bisa berkomunikasi dengan sistem
+__host__ nya di berkas `Vagrantfile` kita bisa tambahkan baris:
+
+[source,ruby,linenums,highlight="3"]
+.Vagrantfile
+----
+Vagrant.configure("2") do |config|
+  config.vm.box = "bento/ubuntu-20.04"
+  config.vm.network "private_network", type:"dhcp"
+end
+----
+
+Lalu kita mulai ulang mesinnya dengan perintah `vagrant reload` lalu kemudian `vagrant ssh`
+
+[source]
+----
+> ip address show dev eth1 <1>
+3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 08:00:27:f6:ab:bb brd ff:ff:ff:ff:ff:ff
+    inet 172.28.128.3/24 <2> brd 172.28.128.255 scope global dynamic eth1
+       valid_lft 581sec preferred_lft 581sec
+    inet6 fe80::a00:27ff:fef6:abbb/64 scope link
+       valid_lft forever preferred_lft forever
+
+> vagrant@vagrant:/vagrant/sources/article$ ARTICLE_HOST=0.0.0.0 ARTICLE_PORT=3000 ./article-linux
+2021/09/06 16:41:36 Server dijalankan di 0.0.0.0 port 3000 ...
+----
+<1> Perintah untuk mendapatkan alamat IP
+<2> Alamat IPV4 yang bisa kita akses.
+
+Kita bisa buka terminal baru di jendela atau tab baru. Lalu kita coba `curl`
+
+[source]
+----
+> curl -v --request POST \
+        --url http://172.28.128.3:3000/articles \ <1>
+        --header 'Content-Type: application/json' \
+        --data '{
+  "title":"pada hari minggu",
+  "content":"pada hari minggu ku turut ayah ke kota, naik delman istimewa ku duduk di muka, ku duduk di samping pak kusir yang sedang bekerja, mengendarai kuda supaya baik jalannya.
+tuk tik tak tik tuk tik tak tik tuk tik tak tik tuk, tuk tik tak tik tuk tik tak, suara sepatu kuda"
+  }'
+
+*   Trying 172.28.128.3:3000...
+* Connected to 172.28.128.3 (172.28.128.3) port 3000 (#0)
+> POST /articles HTTP/1.1
+> Host: 172.28.128.3:3000 <2>
+> User-Agent: curl/7.78.0
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 312
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 201 Created
+< Content-Type: application/json
+< Date: Mon, 06 Sep 2021 17:05:51 GMT
+< Content-Length: 82
+<
+{"id":"46a73b21-e062-4021-a4b4-5bc32473c9b3","created_at":"2021-09-06T17:05:51Z"} 
+----
+<1> __Request__ dikirim ke IP mesin virtual.
+<2> __Response__ ditanggapi mesin virtual.
+
+Di dalam mesin virtual juga akan keluar __log__ nya.
+
+===== Menjalankan di mesin virtual sebagai layanan/service.
+
+Linux mempunyai beberapa mekanisme di mana program akan dijalankan di latar belakang dan dijalankan
+otomatis setelah __booting__. Salah satunya adalah dengan memanfaatkan sebuah layanan Linux yang
+bernama `systemd`. SystemD mengatur proses-proses yang berjalan di atas Linux dan juga layanan yang
+terdefinisi dalam berkas unit.
+
+Tetapi sebelum menulis berkas unitnya, kita coba buat sebuah pengguna dengan nama `article`. Karena
+layanan kita akan berjalan dengan user selain `root` untuk alasan keamanan.
+
+[source]
+----
+$ sudo useradd article -s /sbin/nologin -M
+----
+
+Setelah itu kita buat sebuah direktori `/usr/local/article/bin` dan kita salin berkas
+`article-linux` ke dalamnya.
+
+[source]
+----
+$ sudo mkdir -p /usr/local/article/bin 
+$ sudo cp -a /vagrant/sources/article/article-linux /usr/local/article/bin/
+----
+
+Kemudian kita buat berkas `article.service` di `/lib/systemd/system` dengan isi seperti ini
+
+[source,unit,linenums,highlight="11-12"]
+.article.service 
+----
+[Unit]
+Description=Article Server
+After=network.target
+
+[Service]
+Type=simple
+User=article
+Group=article
+LimitNOFILE=1024
+
+Environment=ARTICLE_HOST=0.0.0.0 <1>
+Environment=ARTICLE_PORT=3000
+
+Restart=on-failure
+RestartSec=10
+
+WorkingDirectory=/usr/local/article/
+ExecStart=/usr/local/article/bin/article
+
+# make sure log directory exists and owned by syslog
+PermissionsStartOnly=true
+ExecStartPre=/bin/mkdir -p /var/log/article
+ExecStartPre=/bin/chown syslog:adm /var/log/article
+ExecStartPre=/bin/chmod 755 /var/log/article
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=article
+
+[Install]
+WantedBy=multi-user.target
+----
+<1> __environment variables__ untuk article server.
+
+Untuk mengaktifkan kita jalankan perintah `systemctl enable` enable dan `systemctl start`
+
+[source]
+----
+> sudo systemctl enable article.service 
+Created symlink /etc/systemd/system/multi-user.target.wants/article.service → /lib/systemd/system/article.service.
+> sudo systemctl start article
+> sudo journalctl -f -u article
+
+Sep 06 17:39:45 vagrant systemd[1]: Starting Article Server...
+Sep 06 17:39:45 vagrant systemd[1]: Started Article Server.
+Sep 06 17:39:45 vagrant article[1963]: 2021/09/06 17:39:45 Server dijalankan di 0.0.0.0 port 3000 ...
+
+> sudo systemctl status article
+
+● article.service - Article Server
+     Loaded: loaded (/lib/systemd/system/article.service; enabled; vendor preset: enabled)
+     Active: active (running) since Mon 2021-09-06 17:39:45 UTC; 1min 49s ago
+    Process: 1950 ExecStartPre=/bin/mkdir -p /var/log/article (code=exited, status=0/SUCCESS)
+    Process: 1951 ExecStartPre=/bin/chown syslog:adm /var/log/article (code=exited, status=0/SUCCESS)
+    Process: 1960 ExecStartPre=/bin/chmod 755 /var/log/article (code=exited, status=0/SUCCESS)
+   Main PID: 1963 (article-linux)
+      Tasks: 4 (limit: 1071)
+     Memory: 1.2M
+     CGroup: /system.slice/article.service
+             └─1963 /usr/local/article/bin/article-linux
+
+Sep 06 17:39:45 vagrant systemd[1]: Starting Article Server...
+Sep 06 17:39:45 vagrant systemd[1]: Started Article Server.
+Sep 06 17:39:45 vagrant article[1963]: 2021/09/06 17:39:45 Server dijalankan di 0.0.0.0 port 3000 ...
+> exit
+----
+
+Artinya sudah jalan sebagai layanan dan kita bisa mengakses dengan perintah `curl` yang sama tanpa
+harus menjalankan manual. Layanan `article` ini akan selalu jalan ketika mesin memulai layaknya di
+server.
+
+===== Menjalankan dengan docker
+
+Jika ingin menjalankan dengan docker, maka pertama kali kita buat berkas `Dockerfile` di direktori
+yang sama dengan kode go nya. Berkas __executable__ go punya dependensi ke libc. Untuk membuatnya
+static kita bisa memakai musl-libc yang didapat dari citra `golang:alpine`. 
+
+Docker yang dipakai juga berupa docker yang __multi stage__. Di mana berkas __executable__ jalan
+sendiri di luar citra __compiler__nya.
+
+__Flag__ yang dipakai oleh go untuk menghasilkan berkas __executable__ yang cocok di produksi adalah
+sebagai berikut. 
+
+- `-w` Hapus tabel simbol DWARF yang digunakan untuk __debugging__.
+- `-s` Hapus seluruh tabel simbol.
+- `-linkmode external` memakai __linker__ eksternal (seperti `gcc` atau `clang`)
+- `-extldflags` menambahkan flag untuk __linker__ eksternal,`-static` membuat berkas __executable__
+  yang statis, hanya bisa jika memaka `golang:alpine` dan `musl` dan `-fPIC` membuat berkas
+  __Position Independent Code__ untuk alasan keamanan.
+
+
+[source]
+.Dockerfile
+----
+FROM golang:alpine AS builder <1>
+
+RUN apk add --no-cache build-base wget git
+
+ADD . /app 
+
+WORKDIR /app
+
+RUN go build -o article -ldflags '-w -s -linkmode external -extldflags "-static -fPIC"' <2>
+
+FROM scratch <3>
+
+WORKDIR /app
+
+COPY --from=builder /app/article /app/article <4>
+
+ENTRYPOINT ["/app/article"]
+----
+
+<1> __Stage__ 0, kita namai dengan __builder__ merupakan kontainer yang akan membangun berkas biner
+dari program kita nanti.
+<2> Perintah lengkap pembangunannya.
+<3> __Stage__ 1, dari `scratch` yang artinya tidak pakai distro linux apapun.
+<4> Salin berkas biner hasil kompilasi tadi dari __stage__ 0 ke __stage__ 1. 
+
+Kita bisa membangun citra dockernya dengan perintah sebagai berikut
+
+[source]
+----
+> docker build -t training/article .
+
+[+] Building 64.9s (12/12) FINISHED
+ => [internal] load build definition from Dockerfile                                                      
+ => => transferring dockerfile: 339B                                                                      
+ => [internal] load .dockerignore                                                                         
+ => => transferring context: 2B                                                                           
+ => [internal] load metadata for docker.io/library/golang:alpine                                          
+ => [builder 1/5] FROM docker.io/library/golang:alpine                                                    
+ => [internal] load build context                                                                         
+ => => transferring context: 20.69kB                                                                      
+ => CACHED [stage-1 1/2] WORKDIR /app                                                                     
+ => [builder 2/5] RUN apk add --no-cache build-base wget git                                              
+ => [builder 3/5] ADD . /app                                                                              
+ => [builder 4/5] WORKDIR /app                                                                            
+ => [builder 5/5] RUN go build -o article -ldflags '-w -s -linkmode external -extldflags "-static -fPIC"' 
+ => [stage-1 2/2] COPY --from=builder /app/article /app/article                                           
+ => exporting to image                                                                                    
+ => => exporting layers                                                                                   
+ => => writing image sha256:9659dce8704349bed8d48749bbf9742569b0781dec55587ca1ea9daa6133c512              
+ => => naming to docker.io/training/article     
+----
+
+Lalu kita jalankan dengan `docker run` dan kita bisa coba dengan beberapa parameter 
+
+- `-p 3000:3000` memetakan port 3000 dari kontainer ke __port__ 3000 di __host__.
+- `-e ARTICLE_HOST=0.0.0.0 -e ARTICLE_PORT=3000` mengirimkan __environment variable__ untuk __host__
+  dan __port__ ke kontainer
+- `-d` Jalankan dalam keadaan __detached__ .
+
+[source]
+----
+> docker run -e ARTICLE_HOST=0.0.0.0 -e ARTICLE_PORT=3000 -p 3000:3000 -d training/article
+e40dbeda769c968a290f308f4101df68f12d8483a6fd97a735c80c5496d59ba2
+
+> docker ps
+CONTAINER ID   IMAGE              COMMAND          CREATED         STATUS        PORTS                                       NAMES
+e40dbeda769c   training/article   "/app/article"   2 seconds ago   Up 1 second   0.0.0.0:3000->3000/tcp, :::3000->3000/tcp   nervous_pike
+
+----
+
+Terlihat kalau port nya sudah di-map. Jadi kita tinggal coba lagi dengan `curl`.
+
+
+[source]
+----
+> curl -v --request POST \
+        --url http://127.0.0.1:3000/articles \
+        --header 'Content-Type: application/json' \
+        --data '{
+  "title":"pada hari minggu",
+  "content":"pada hari minggu ku turut ayah ke kota, naik delman istimewa ku duduk di muka, ku duduk di samping pak kusir yang sedang bekerja, mengendarai kuda supaya baik jalannya. tuk tik tak tik tuk tik tak tik tuk tik tak tik tuk, tuk tik tak tik tuk tik tak, suara sepatu kuda"
+  }' -v
+
+*   Trying 127.0.0.1:3000...
+* Connected to 127.0.0.1 (127.0.0.1) port 3000 (#0)
+> POST /articles HTTP/1.1
+> Host: 127.0.0.1:3000
+> User-Agent: curl/7.78.0
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 312
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 201 Created
+< Content-Type: application/json
+< Date: Tue, 07 Sep 2021 10:14:33 GMT
+< Content-Length: 82
+<
+{"id":"a6b01024-2244-4f35-b10a-1343f05287e4","created_at":"2021-09-07T10:14:33Z"}
+* Connection #0 to host 127.0.0.1 left intact
+----
+
+Dan kalau kita lihat di dalam kontainer, lognya akan keliatan.
+
+[source]
+----
+> docker logs nervous_pike
+
+2021/09/07 10:11:25 Server dijalankan di 0.0.0.0 port 3000 ...
+2021/09/07 10:14:33 "POST http://127.0.0.1:3000/articles HTTP/1.1" from 172.17.0.1:55346 - 201 82B
+in 185.7µs
+----
+
+<1> `nervous_pike` adalah nama kontainer yang didapatkan dari `docker ps`. Bisa juga memakai hash
+
+=== Latihan
+
+. Implementasikan __environment variable__ untuk perangkat lunak yang dibuat.
+. Bangun dan __deploy__ perangkat lunak yang sudah ditulis ke systemd dan docker.
+. Buat dan deploy berkas anda di server VPS yang sudah anda beli.

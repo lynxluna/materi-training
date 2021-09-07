@@ -1,17 +1,272 @@
-== Deployment
+== Refactoring Dan Implementasi Basis Data 
 
-> The key in such a transition to continuous delivery is to expect things to get worse before you’ll
-> be able to make them better - Matthias Marschall
+> When you find you have to add a feature to a program, and the program's code is not structured in
+> a convenient way to add the feature, first refactor the program to make it easy to add the
+> feature, then add the feature. -- Martin Fowler
 
-Untuk men __deploy__ ke server, paling tidak kita mengerti struktur direktori dan perintah dasar linux.
-Di modul ini, yang akan kita pakai adalah Linux yang berbasis debian. Untuk studi kasus ini kita
-akan memakai hosting https://idcloudhost.com[IDCloudHost] karena menurut saya hosting ini menawarkan
-VPS termurah.
-
-[WARNING]
+[NOTE]
 ====
-Bukan iklan, ini benar-benar dari pengalaman pribadi.
+Bab ini dan selanjutnya, asumsinya adalah semua orang sudah memasang Docker Desktop. Selain itu
+faktor keamanan dari basis data tidak diajarkan dalam modul ini.
 ====
 
-==== Menyiapkan lingkungan untuk __deploy__
+Saat ini, kita sudah punya server yang bisa dipakai untuk menjalankan API yang kita punya. Tetapi,
+masalahnya adalah, jika servernya mati, maka semua datanya akan hilang. Ya ini risiko dari
+penyimpanan dalam memori.
 
+Supaya tidak mati, kita perlu menyimpan di basis data. Basis data yang dipakai bisa berupa basis
+data relasional maupun tidak. Kelebihan dan kekurangan dari basis data di luar kursus ini. 
+
+Supaya bisa memakai basis data, kita harus melakukan penambahan dan perubahan kode, yang sering
+dinamakan __refactoring__.
+
+=== Definisi Refactoring
+
+Secara mudah, __refactoring__ adalah penataan ulang dan perubahan kode **tanpa mengubah** perilaku
+dari kode yang bersangkutan. Kegiatan __refactoring__ kita kali ini tidak menambah atau mengurangi
+perilaku utama dari perangkat lunak yang sudah kita bangun. 
+
+=== Menyiapkan Basis Data untuk Refactoring
+
+Basis data yang akan kita pakai adalah https://postgresql.org[PostgreSQL]. Untuk memasang PostgreSQL
+kita bisa memakai manajer paket dari distro yang bersangkutan atau menggunakan docker.
+
+===== Menggunakan manajer paket dari distro Ubuntu Focal Fossa 
+
+Ubuntu Focal Fossa versi 20.04 mempunyai paket `postgresql-server` tetapi yang ikut dalam distro
+tersebut adalah versi 12. Kita ingin memakai versi terbaru, yaitu versi 13. Oleh karenanya kita
+harus menambahkan PPA (__Personal Package Archive__) untuk PostgreSQL 13.
+
+[source]
+----
+> wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+
+OK
+> sudo sh -c \ 
+
+'echo "deb http://apt.postgresql.org/pub/repos/apt/ focal-pgdg main" >> /etc/apt/sources.list.d/postgresql.list'
+
+> sudo apt upgrade
+
+# .. output saya hilangkan karena terlalu panjang
+
+> sudo apt install -y  postgresql-13
+
+# .. output dihilangkan 
+----
+
+===== Membuat basis data
+
+Lalu kita beralih menjadi pengguna `postgres` untuk membuat nama pengguna dan kata kunci untuk
+perangkat lunak kita. 
+
+[source]
+----
+> sudo su - postgres
+> createuser blogdbuser -P
+----
+
+Lalu akan ada pertanyaan tentang kata kunci. Isi kata kunci dua kali. Saya asumsikan kata kuncinya
+adalah `blog123`. Lalu kita buat basis data baru dengan `createdb`.
+
+[source]
+----
+> createdb blog -O blogdbuser
+> psql -U blogdbuser -h 127.0.0.1 -p 5432 -d blog
+
+psql (13.4 (Ubuntu 13.4-1.pgdg20.04+1))
+SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
+Type "help" for help.
+
+blog => 
+----
+
+===== Belajar membuat, mengisi, memperbarui, dan menghapus data dengan SQL.
+
+Mari kita lihat kembali struktur dari __domain object__ `Article`:
+
+[source,go]
+----
+type Article struct {
+  ID			uuid.UUID
+  Title			string
+  Content		string
+
+  CreatedAt time.Time
+}
+----
+
+Dari objek ini kita bisa buat tabel di basis data seperti berikut:
+
+[NOTE]
+====
+Untuk tipe data dan sintaks SQL silahkan baca dokumentasi PostgreSQL.
+====
+
+[cols="1,4,2"]
+.Article DB Table 
+|===
+| Nama __field__ | Tipe | Keterangan Tambahan 
+
+| `id` | `uuid` | `PRIMARY KEY`
+| `title` | `char varying(1024)` | 
+| `content` | `text` | 
+| `created_at` | `timestamp with time zone` | 
+
+|===
+
+Caranya adalah dengan menuliskan perintah di dalam __prompt__ `psql`.
+
+[source,sql]
+----
+CREATE TABLE articles (
+  id uuid NOT NULL PRIMARY KEY,
+  title VARCHAR(1024) NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), 
+);
+----
+
+Lalu kita bisa cek skema dari table `articles` tadi dengan `\d+`:
+
+[source]
+----
+blog=> \d articles
+                        Table "public.articles"
+   Column   |           Type           | Collation | Nullable | Default
+------------+--------------------------+-----------+----------+---------
+ id         | uuid                     |           | not null |
+ title      | character varying(1024)  |           | not null |
+ content    | text                     |           | not null |
+ created_at | timestamp with time zone |           | not null | now()
+Indexes:
+    "articles_pkey" PRIMARY KEY, btree (id)
+----
+
+Kita coba berlatih memasukkan __record__ dengan menggunakan klausa `INSERT`:
+
+[source,sql]
+----
+INSERT INTO articles(id, title, content, created_at)
+ VALUES('2205a9ba-05bb-47c0-a111-fd443a872252'::uuid, 'test', 'test content', now());
+----
+
+Lalu kita coba untuk menampilkan data dengan menggunakan klausa `SELECT`:
+
+[source,sql]
+----
+SELECT id, title, content, created_at FROM articles;
+----
+
+[source]
+----
+id                  | title |   content    |          created_at
+--------------------------------------+-------+--------------+-------------------------------
+ 2205a9ba-05bb-47c0-a111-fd443a872252 | test  | test content | 2021-09-07 12:48:59.208549+00
+----
+
+Untuk membarui kita bisa menggunakan klausa `UPDATE`:
+
+[source,sql]
+----
+UPDATE articles 
+  SET title='new title is here',content='crouching tiger hidden dragon' 
+  WHERE id='2205a9ba-05bb-47c0-a111-fd443a872252';
+----
+
+Dan yang terakhir kita bisa hapus __record__ nya dengan klausa `DELETE`:
+
+[source,sql]
+----
+DELETE FROM articles WHERE id='2205a9ba-05bb-47c0-a111-fd443a872252';
+----
+
+=== Merefaktor lapisan penyimpanan ke SQL.
+
+Kita implementasikan __interface__ `ArticleFinder` dan `ArticleSaver` yang tadinya dalam memori, kita
+tambahkan implementasi dalam SQL. Untuk memudahkan dalam mengeksekusi SQL, kita akan memakai
+Squirrel yang merupakan sql generator.
+
+[source,go,linenums]
+.sql_store.go
+----
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
+
+type SQLStore struct {
+}
+
+func (s *SQLStore) SaveArticle(ctx context.Context, article Article) error {
+	return ErrNotImplemented
+}
+
+func (s *SQLStore) FindArticleByID(ctx context.Context, id uuid.UUID) (Article, error) {
+	return Article{}, ErrNotImplemented
+}
+----
+
+Kita buat konstruktor buat `SQLStore` dengan mengisi `db`:
+
+[source,go]
+.sql_store.go
+----
+
+type SQLStore struct {
+  db *sql.DB // <1>
+}
+
+func CreateSQLStore(driver, connString string) (*SQLStore, error) { // <2>
+	db, err := sql.Open(driver, connString)  
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &SQLStore{
+		db: db,
+	}, nil
+}
+
+----
+<1> Objek basis data.
+<2> Konstruktor dari objek sql store.
+
+Kemudian kita implementasikan `FindArticleByID`:
+
+[source,go,linenums]
+----
+func (s *SQLStore) SaveArticle(ctx context.Context, article Article) error {
+	var err error
+
+	updateMap := map[string]interface{}{ // <1>
+		"id":         article.ID,
+		"title":      article.Title,
+		"content":    article.Content,
+		"created_at": article.CreatedAt,
+	}
+
+	_, err = squirrel.
+		Insert("articles").Columns("id", "title", "content", "created_at").
+		SetMap(updateMap).RunWith(s.db).ExecContext(ctx) // <2>
+
+	if err == nil { // <3>
+		return err
+	}
+
+	idPredicate := squirrel.Eq{"id": article.ID} // <4>
+
+	_, err = squirrel. //<5>
+		Update("articles").Where(idPredicate).
+		SetMap(updateMap).RunWith(s.db).ExecContext(ctx)
+
+	return err
+}
+----
+<1> Petakan __field__ di basis data dengan nama di struktur 
+<2> Kita coba `INSERT` terlebih dahulu.
+<3> Jika tidak ada galat, maka keluar 
+<4> Predicate untuk mengisi klausa `WHERE`.
+<5> Jika tidak bisa di- `INSERT` kita lakukan `UPDATE` karena artinya sudah ada. 

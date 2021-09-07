@@ -872,6 +872,11 @@ Lalu kita coba membuat satu artikel dengan menggunakan perintah post
 . Implementasikan use case dan API __endpoint__ untuk 3 kasus yang lain dari __user story__ di
 atas, lengkap dengan kode pengujinya dan perintah `curl` nya.
 
+==== Latihan tingkat lanjut
+. Implementasikan kasus penghapusan artikel.
+. Implementasikan kasus penghapusan artikel dengan __soft delete__. Artinya tidak
+benar-benar hidapus, hanya ditandai kalau artikel yang bersangkutan sudah terhapus.
+
 [TIP]
 .Petunjuk pengerjaan
 ====
