@@ -216,9 +216,11 @@ Kita buat konstruktor buat `SQLStore` dengan mengisi `db`:
 
 type SQLStore struct {
   db *sql.DB // <1>
+
+  ph sq.PlaceholderFormat
 }
 
-func CreateSQLStore(driver, connString string) (*SQLStore, error) { // <2>
+func CreateSQLStore(driver, connString string, ph sq.PlaceholderFormat) (*SQLStore, error) { // <2>
 	db, err := sql.Open(driver, connString)  
 
 	if err != nil {
@@ -227,6 +229,7 @@ func CreateSQLStore(driver, connString string) (*SQLStore, error) { // <2>
 
 	return &SQLStore{
 		db: db,
+    ph: ph,
 	}, nil
 }
 
@@ -234,7 +237,7 @@ func CreateSQLStore(driver, connString string) (*SQLStore, error) { // <2>
 <1> Objek basis data.
 <2> Konstruktor dari objek sql store.
 
-Kemudian kita implementasikan `FindArticleByID`:
+Kemudian kita implementasikan metode `SaveArticle`:
 
 [source,go,linenums]
 ----
@@ -248,19 +251,21 @@ func (s *SQLStore) SaveArticle(ctx context.Context, article Article) error {
 		"created_at": article.CreatedAt,
 	}
 
-	_, err = squirrel.
+	_, err = sq.
 		Insert("articles").Columns("id", "title", "content", "created_at").
-		SetMap(updateMap).RunWith(s.db).ExecContext(ctx) // <2>
+		SetMap(updateMap).
+		PlaceholderFormat(s.ph).RunWith(s.db).ExecContext(ctx) // <2>
 
 	if err == nil { // <3>
 		return err
 	}
 
-	idPredicate := squirrel.Eq{"id": article.ID} // <4>
+	idPredicate := sq.Eq{"id": article.ID} // <4>
 
-	_, err = squirrel. //<5>
+	_, err = sq. 
 		Update("articles").Where(idPredicate).
-		SetMap(updateMap).RunWith(s.db).ExecContext(ctx)
+		SetMap(updateMap).
+		PlaceholderFormat(s.ph).RunWith(s.db).ExecContext(ctx) // <5>
 
 	return err
 }
