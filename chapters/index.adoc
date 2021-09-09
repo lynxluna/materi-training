@@ -1,0 +1,30 @@
+= Modul Pelatihan Dari Story Ke Software: Edisi Backend Dengan Golang
+:author: Didiet Noor
+:email: dnoor@retrocoding.net
+:toc:
+:toclevels: 3
+:figure-caption: Gambar
+:table-caption: Tabel
+:toc-title: Daftar Isi
+:lang: id
+:note-caption: Catatan
+:warning-caption: Peringatan
+:source-highlighter: rouge
+:icons: font
+:sourcedir: ../sources
+
+:sectnums:
+
+include::training-00.adoc[]
+
+include::training-01.adoc[]
+
+include::training-02.adoc[]
+
+include::training-03.adoc[]
+
+include::training-04.adoc[]
+
+include::training-05.adoc[]
+
+include::training-06.adoc[]

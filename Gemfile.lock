@@ -6,6 +6,10 @@ GEM
       public_suffix (>= 2.0.2, < 5.0)
     afm (0.2.2)
     asciidoctor (2.0.16)
+    asciidoctor-epub3 (1.5.1)
+      asciidoctor (>= 1.5.6, < 3.0.0)
+      gepub (~> 1.0.0)
+      mime-types (~> 3.0)
     asciidoctor-multipage (0.0.12)
       asciidoctor (>= 2.0.11, < 2.1)
     asciidoctor-pdf (1.6.0)
@@ -22,7 +26,15 @@ GEM
     concurrent-ruby (1.1.9)
     css_parser (1.10.0)
       addressable
+    gepub (1.0.14)
+      nokogiri (>= 1.8.2, < 1.13)
+      rubyzip (> 1.1.1, < 2.4)
     hashery (2.1.2)
+    mime-types (3.3.1)
+      mime-types-data (~> 3.2015)
+    mime-types-data (3.2021.0901)
+    nokogiri (1.12.4-x86_64-darwin)
+      racc (~> 1.4)
     pdf-core (0.9.0)
     pdf-reader (2.5.0)
       Ascii85 (~> 1.0)
@@ -47,9 +59,11 @@ GEM
       prawn (~> 2.2)
     public_suffix (4.0.6)
     pygments.rb (2.2.0)
+    racc (1.5.2)
     rexml (3.2.5)
     rouge (3.26.0)
     ruby-rc4 (0.1.5)
+    rubyzip (2.3.2)
     safe_yaml (1.0.5)
     treetop (1.6.11)
       polyglot (~> 0.3)
@@ -60,6 +74,7 @@ PLATFORMS
 
 DEPENDENCIES
   asciidoctor
+  asciidoctor-epub3
   asciidoctor-multipage
   asciidoctor-pdf
   coderay

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 
 	"github.com/Masterminds/squirrel"
@@ -54,4 +55,11 @@ func TestSQLStorePostgres(t *testing.T) {
 			assert.GreaterOrEqual(t, 1*time.Minute, article.CreatedAt.Sub(a.CreatedAt))
 		}
 	}
+
+	nonExistentID, _ := uuid.NewRandom()
+
+	a, err := store.FindArticleByID(ctx, nonExistentID) // <4>
+
+	assert.Equal(t, Article{}, a)
+	assert.ErrorIs(t, ErrArticleNotFound, err)
 }

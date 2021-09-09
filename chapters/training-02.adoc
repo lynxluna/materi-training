@@ -97,13 +97,17 @@ Sebelum kita mengisi, kita tulis dulu saja testnya karena kita sudah tahu __beha
 inginkan yaitu:
 
 . Bisa menyimpan artikel secara keseluruhan 
-. Bisa mencari artikel berdasarkan ID
+. Bisa mencari artikel berdasarkan ID dan menampilkan galat jika artikel tidak ada.
 
 [source,go]
 .mem_store_test.go
 ----
 include::{sourcedir}/article/mem_store_test.go[]
 ----
+<1> Inisialialisasi penyimpanan dalam memori.
+<2> Menyimpan objek `Article`
+<3> Mencari objek artikel yang sudah disimpan.
+<4> Menguji jika objek artikel tersebut tidak ada.
 
 ===== Membuat __Skeleton__ untuk `MemStore`
 

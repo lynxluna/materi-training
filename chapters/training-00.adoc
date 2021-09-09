@@ -1,5 +1,4 @@
 == Perkenalan
-:sourcedir: ../sources
 
 > Go is an attempt to combine the safety and performance of statically typed languages with the
 > convenience and fun of dynamically typed interpretative languages. -- Rob Pike

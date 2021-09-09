@@ -330,3 +330,19 @@ include::{sourcedir}/article/sql_store_test.go[]
 <1> Skip ketika `go test` menggunakan `-short`.
 <2> Simpan artikel ke SQL
 <3> Kemudian uji apakah ada dari dalam store.
+
+Untuk menjalankan uji ini, kita harus menjalankan PostgreSQL di mesin lokal. Cara yang paling
+praktis adalah dengan menggunakan `docker`.
+
+[source]
+----
+> docker run -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres \
+  -e POSTGRES_DB=articledbtest -p 5432:5432 -d postgres:alpine
+
+> go test 
+----
+
+==== Latihan 
+
+1. Integrasikan `SQLStorage` untuk menggantikan `MemStorage` di lapisan __use case__.
+2. Refaktor supaya implementasi penyimpananya bisa diubah lewat konfigurasi.
