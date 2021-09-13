@@ -9,9 +9,10 @@
 :lang: id
 :note-caption: Catatan
 :warning-caption: Peringatan
-:source-highlighter: rouge
+:source-highlighter: pygments
 :icons: font
 :sourcedir: ../sources
+:doctype: book
 
 :sectnums:
 

@@ -31,7 +31,7 @@ perilaku utama dari perangkat lunak yang sudah kita bangun.
 Basis data yang akan kita pakai adalah https://postgresql.org[PostgreSQL]. Untuk memasang PostgreSQL
 kita bisa memakai manajer paket dari distro yang bersangkutan atau menggunakan docker.
 
-===== Menggunakan manajer paket dari distro Ubuntu Focal Fossa 
+==== Menggunakan manajer paket dari distro Ubuntu Focal Fossa 
 
 Ubuntu Focal Fossa versi 20.04 mempunyai paket `postgresql-server` tetapi yang ikut dalam distro
 tersebut adalah versi 12. Kita ingin memakai versi terbaru, yaitu versi 13. Oleh karenanya kita
@@ -55,7 +55,7 @@ OK
 # .. output dihilangkan 
 ----
 
-===== Membuat basis data
+==== Membuat basis data
 
 Lalu kita beralih menjadi pengguna `postgres` untuk membuat nama pengguna dan kata kunci untuk
 perangkat lunak kita. 
@@ -81,7 +81,7 @@ Type "help" for help.
 blog => 
 ----
 
-===== Belajar membuat, mengisi, memperbarui, dan menghapus data dengan SQL.
+==== Belajar membuat, mengisi, memperbarui, dan menghapus data dengan SQL.
 
 Mari kita lihat kembali struktur dari __domain object__ `Article`:
 

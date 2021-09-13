@@ -305,11 +305,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-chi/chi/v5" //<1>
+	"github.com/go-chi/chi/v5" // <1>
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-type HTTPServer struct { //<2>
+type HTTPServer struct { // <2>
 	port uint16
 	host string
 
@@ -332,7 +332,7 @@ func NewHTTPServer(options ...func(*HTTPServer) error) (*HTTPServer, error) { //
 		return httpServer, nil
 	}
 
-	for _, opt := range options { <5>
+	for _, opt := range options { // <5>
 		if err := opt(httpServer); err != nil {
 			return nil, err
 		}
@@ -341,7 +341,7 @@ func NewHTTPServer(options ...func(*HTTPServer) error) (*HTTPServer, error) { //
 	return httpServer, nil
 }
 
-func (s *HTTPServer) Start() {
+func (s *HTTPServer) Start() { // <6>
 	listen := fmt.Sprintf("%s:%d", s.host, s.port)
 
 	http.ListenAndServe(listen, s.router)
@@ -512,7 +512,7 @@ func NewHTTPServer(options ...func(*HTTPServer) error) (*HTTPServer, error) {
 		uc:     uc,
 	}
 
-	httpServer.setupRoute() // <2>
+	httpServer.setupRoute() // <3>
 
   // ...
 }

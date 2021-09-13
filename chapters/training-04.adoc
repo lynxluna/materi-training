@@ -486,10 +486,10 @@ Lalu kita mulai ulang mesinnya dengan perintah `vagrant reload` lalu kemudian `v
 
 [source]
 ----
-> ip address show dev eth1 <1>
+> ip address show dev eth1 # <1>
 3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
     link/ether 08:00:27:f6:ab:bb brd ff:ff:ff:ff:ff:ff
-    inet 172.28.128.3/24 <2> brd 172.28.128.255 scope global dynamic eth1
+    inet 172.28.128.3/24 brd 172.28.128.255 scope global dynamic eth1 # <2>
        valid_lft 581sec preferred_lft 581sec
     inet6 fe80::a00:27ff:fef6:abbb/64 scope link
        valid_lft forever preferred_lft forever
@@ -763,7 +763,7 @@ Dan kalau kita lihat di dalam kontainer, lognya akan keliatan.
 
 [source]
 ----
-> docker logs nervous_pike
+> docker logs nervous_pike <1>
 
 2021/09/07 10:11:25 Server dijalankan di 0.0.0.0 port 3000 ...
 2021/09/07 10:14:33 "POST http://127.0.0.1:3000/articles HTTP/1.1" from 172.17.0.1:55346 - 201 82B
