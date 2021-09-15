@@ -9,6 +9,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
+	"github.com/google/uuid"
 )
 
 type HTTPServer struct {
@@ -18,10 +20,13 @@ type HTTPServer struct {
 	router *chi.Mux
 
 	uc *ArticleUseCase
+
+	articleFinder ArticleFinder
 }
 
 func NewHTTPServer(options ...func(*HTTPServer) error) (*HTTPServer, error) {
-	uc, err := NewArticleUseCase(CreateMemStore())
+	store := CreateMemStore()
+	uc, err := NewArticleUseCase(store)
 	if err != nil {
 		return nil, err
 	}
@@ -30,12 +35,23 @@ func NewHTTPServer(options ...func(*HTTPServer) error) (*HTTPServer, error) {
 
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(cors.Handler(cors.Options{
+		// AllowedOrigins:   []string{"https://foo.com"}, // Use this to allow specific origin hosts
+		AllowedOrigins: []string{"https://*", "http://*"},
+		// AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300, // Maximum value not ignored by any of major browsers
+	}))
 
 	httpServer := &HTTPServer{
-		host:   "127.0.0.1",
-		port:   8000,
-		router: r,
-		uc:     uc,
+		host:          "127.0.0.1",
+		port:          8000,
+		router:        r,
+		articleFinder: store,
+		uc:            uc,
 	}
 
 	httpServer.setupRoute()
@@ -57,7 +73,11 @@ func (s *HTTPServer) setupRoute() {
 	r := s.router
 
 	r.Post("/articles", s.NewArticleHandler)
-	r.Put("/articles/{articleID}", s.EditArticleHandler)
+
+	r.Route("/articles/{articleID}", func(r chi.Router) {
+		r.Put("/", s.EditArticleHandler)
+		r.Get("/", s.SingleArticleHandler)
+	})
 }
 
 func (s *HTTPServer) Start() {
@@ -121,6 +141,32 @@ func (s *HTTPServer) NewArticleHandler(w http.ResponseWriter, r *http.Request) {
 	}{article.ID.String(), article.CreatedAt.Format(time.RFC3339)}
 
 	writeJSON(w, http.StatusCreated, result)
+}
+
+func (s *HTTPServer) SingleArticleHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	aidStr := chi.URLParamFromCtx(ctx, "articleID")
+
+	aid, err := uuid.Parse(aidStr)
+
+	if err != nil {
+		writeError(w, http.StatusNotFound, err)
+		return
+	}
+
+	article, err := s.articleFinder.FindArticleByID(ctx, aid)
+
+	if err != nil {
+		if err == ErrArticleNotFound {
+			writeError(w, http.StatusNotFound, err)
+		} else {
+			writeError(w, http.StatusInternalServerError, err)
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, article)
 }
 
 func (s *HTTPServer) EditArticleHandler(w http.ResponseWriter, r *http.Request) {

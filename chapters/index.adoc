@@ -29,3 +29,5 @@ include::training-04.adoc[]
 include::training-05.adoc[]
 
 include::training-06.adoc[]
+
+include::training-07.adoc[]

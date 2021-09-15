@@ -44,8 +44,6 @@ mengimplementasikan operasi pembuatan artikel di domain layer. Sekarang kita aka
 lapisan penyimpanan dan domain untuk mencapai satu __use case__ yang tertera dalam __story__ di
 atas.
 
-Todo: data flow
-
 Kita akan buat __prototype__ dari __Use Case__ pertama. Karena kita tidak peduli implementasi detil
 dari lapisan penyimpanan kita, yang kita inginkan hanya **operasinya**. Kita definisikan dua
 __interface__ yaitu `ArticleFinder` untuk mencari artikel `ArticleSaver` untuk menyimpan artikel.

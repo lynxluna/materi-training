@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 	"unicode/utf8"
@@ -105,4 +106,20 @@ func (a *Article) EditArticle(title, content string) error {
 	a.Content = content
 
 	return nil
+}
+
+func (a Article) MarshalJSON() ([]byte, error) {
+	j := struct {
+		ID        string `json:"id"`
+		Title     string `json:"title"`
+		Content   string `json:"content"`
+		CreatedAt string `json:"created_at"`
+	}{
+		ID:        a.ID.String(),
+		Title:     a.Title,
+		Content:   a.Content,
+		CreatedAt: a.CreatedAt.Format(time.RFC3339),
+	}
+
+	return json.Marshal(j)
 }
