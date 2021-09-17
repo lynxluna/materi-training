@@ -77,7 +77,7 @@ func (s *MemStore) ListArticles(ctx context.Context) ([]ArticleBrief, error) {
 	count := len(s.articles)
 
 	if count == 0 {
-		return nil, nil
+		return []ArticleBrief{}, nil
 	}
 
 	briefs := make([]ArticleBrief, count)

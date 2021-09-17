@@ -21,7 +21,7 @@ type HTTPServer struct {
 
 	uc *ArticleUseCase
 
-	articleFinder ArticleFinder
+	articleReader ArticleReader
 }
 
 func NewHTTPServer(options ...func(*HTTPServer) error) (*HTTPServer, error) {
@@ -50,7 +50,7 @@ func NewHTTPServer(options ...func(*HTTPServer) error) (*HTTPServer, error) {
 		host:          "127.0.0.1",
 		port:          8000,
 		router:        r,
-		articleFinder: store,
+		articleReader: store,
 		uc:            uc,
 	}
 
@@ -72,11 +72,14 @@ func NewHTTPServer(options ...func(*HTTPServer) error) (*HTTPServer, error) {
 func (s *HTTPServer) setupRoute() {
 	r := s.router
 
-	r.Post("/articles", s.NewArticleHandler)
+	r.Route("/articles", func(r chi.Router) {
+		r.Post("/", s.NewArticleHandler)
+		r.Get("/", s.ListArticlesHandler)
 
-	r.Route("/articles/{articleID}", func(r chi.Router) {
-		r.Put("/", s.EditArticleHandler)
-		r.Get("/", s.SingleArticleHandler)
+		r.Route("/{articleID}", func(r chi.Router) {
+			r.Put("/", s.EditArticleHandler)
+			r.Get("/", s.SingleArticleHandler)
+		})
 	})
 }
 
@@ -155,7 +158,7 @@ func (s *HTTPServer) SingleArticleHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	article, err := s.articleFinder.FindArticleByID(ctx, aid)
+	article, err := s.articleReader.FindArticleByID(ctx, aid)
 
 	if err != nil {
 		if err == ErrArticleNotFound {
@@ -167,6 +170,23 @@ func (s *HTTPServer) SingleArticleHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	writeJSON(w, http.StatusOK, article)
+}
+
+func (s *HTTPServer) ListArticlesHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	briefs, err := s.articleReader.ListArticles(ctx)
+
+	if err != nil {
+		if err == ErrArticleNotFound {
+			writeError(w, http.StatusNotFound, err)
+		} else {
+			writeError(w, http.StatusInternalServerError, err)
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, briefs)
 }
 
 func (s *HTTPServer) EditArticleHandler(w http.ResponseWriter, r *http.Request) {

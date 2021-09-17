@@ -24,3 +24,8 @@ type ArticleFinderSaver interface {
 type ArticleLister interface {
 	ListArticles(ctx context.Context) ([]ArticleBrief, error)
 }
+
+type ArticleReader interface {
+	ArticleFinder
+	ArticleLister
+}
