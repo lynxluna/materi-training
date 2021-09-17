@@ -70,3 +70,27 @@ func (s *MemStore) FindArticleByID(ctx context.Context, id uuid.UUID) (Article, 
 
 	return article, nil
 }
+
+// List ArticleBrief
+
+func (s *MemStore) ListArticles(ctx context.Context) ([]ArticleBrief, error) {
+	count := len(s.articles)
+
+	if count == 0 {
+		return nil, nil
+	}
+
+	briefs := make([]ArticleBrief, count)
+
+	i := 0
+	for _, v := range s.articles {
+		briefs[i] = ArticleBrief{
+			ID:        v.ID,
+			Title:     v.Title,
+			CreatedAt: v.CreatedAt,
+		}
+		i++
+	}
+
+	return briefs, nil
+}

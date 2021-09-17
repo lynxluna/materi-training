@@ -83,3 +83,39 @@ func (s *SQLStore) FindArticleByID(ctx context.Context, id uuid.UUID) (Article, 
 
 	return article, nil
 }
+
+func (s *SQLStore) ListArticles(ctx context.Context) ([]ArticleBrief, error) {
+	var ret []ArticleBrief
+	var err error
+	var rows *sql.Rows
+
+	const initialSize = 25
+
+	rows, err = sq.
+		Select("id", "title", "created_at").
+		From("articles").
+		RunWith(s.db).PlaceholderFormat(s.ph).
+		QueryContext(ctx)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	ret = make([]ArticleBrief, 0, 25)
+
+	for rows.Next() {
+		var b ArticleBrief
+		if err := rows.Scan(&b.ID, &b.Title, &b.CreatedAt); err != nil {
+			return nil, err
+		}
+
+		ret = append(ret, b)
+	}
+
+	return ret, nil
+}

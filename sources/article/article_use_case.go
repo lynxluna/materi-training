@@ -7,19 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type ArticleFinder interface {
-	FindArticleByID(ctx context.Context, id uuid.UUID) (Article, error)
-}
-
-type ArticleSaver interface {
-	SaveArticle(ctx context.Context, article Article) error
-}
-
-type ArticleFinderSaver interface {
-	ArticleFinder
-	ArticleSaver
-}
-
 type ArticleUseCase struct {
 	store ArticleFinderSaver
 }

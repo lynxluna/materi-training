@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,4 +36,14 @@ func TestMemStore(t *testing.T) {
 	assert.Equal(t, Article{}, a)
 	assert.ErrorIs(t, ErrArticleNotFound, err)
 
+	articleList := []ArticleBrief{
+		{article.ID, article.Title, article.CreatedAt},
+	}
+
+	res, err := memStore.ListArticles(ctx)
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+	if !assert.True(t, cmp.Equal(articleList, res)) {
+		t.Log(cmp.Diff(articleList, res))
+	}
 }
