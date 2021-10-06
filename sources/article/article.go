@@ -94,6 +94,10 @@ func CreateArticle(title, content string) (Article, error) {
 }
 
 func (a *Article) EditArticle(title, content string) error {
+	if a.IsNil() {
+		return ErrNilArticle
+	}
+
 	if err := validateTitle(title); err != nil {
 		return err
 	}

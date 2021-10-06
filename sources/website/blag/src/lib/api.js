@@ -18,6 +18,11 @@ const API = {
     method: 'GET',
     credentials: 'include',
   }),
+
+  list_articles: async() => fetch (build_url('/articles'), {
+    method: 'GET',
+    credentials: 'include',
+  })
 }
 
 export {API}
